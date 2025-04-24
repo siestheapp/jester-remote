@@ -24,13 +24,12 @@ class JesterVectorSearch:
             chunks_path: Path to store/load the chunks metadata
             model_name: Name of the sentence transformer model to use
         """
+        # Create data directories if they don't exist
+        os.makedirs("data/vector", exist_ok=True)
+        
         self.model = SentenceTransformer(model_name)
         self.index_path = Path(index_path)
         self.chunks_path = Path(chunks_path)
-        
-        # Create parent directories if they don't exist
-        self.index_path.parent.mkdir(parents=True, exist_ok=True)
-        self.chunks_path.parent.mkdir(parents=True, exist_ok=True)
         
         # Initialize or load index and chunks
         self._load_or_create_index()
