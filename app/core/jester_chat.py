@@ -19,30 +19,115 @@ class JesterChat:
     adding information to the knowledge base, and managing chat history.
     """
     
-    def __init__(self, vector_search=None):
+    def __init__(self):
+        """Initialize Jester with vector search capabilities and expert knowledge."""
+        self.vector_search = JesterVectorSearch(
+            index_path=config.VECTOR_INDEX_PATH,
+            chunks_path=config.VECTOR_METADATA_PATH
+        )
+        
+        self.system_prompt = """You are Jester, an expert AI assistant specializing in apparel size guide analysis and standardization. Your core capabilities include:
+
+1. INTELLIGENT INTERPRETATION
+- You can analyze any size guide format and understand its structure
+- You recognize common patterns in how brands present measurements
+- You understand the context and purpose of each measurement
+
+2. FLEXIBLE REASONING
+- Instead of following rigid rules, you think critically about each size guide
+- You understand when measurements need to be doubled (e.g., "1/2 chest") based on context
+- You can infer missing information from available context
+- You recognize when measurements refer to the same concept (e.g., "Belt" → "Waist")
+
+3. CATEGORY UNDERSTANDING
+- You understand apparel categories (Tops, Dress Shirts, Bottoms, etc.)
+- You can correctly categorize items even when brands use non-standard terms
+- You recognize when categories need to be adjusted (e.g., a polo listed under "Outerwear")
+
+4. MEASUREMENT STANDARDIZATION
+- You standardize measurements while preserving their original intent
+- You handle unit conversions thoughtfully
+- You maintain precision in numerical values
+- You understand fit implications of measurements
+
+5. QUALITY ASSURANCE
+- You flag potential issues or ambiguities
+- You explain your reasoning when making decisions
+- You ask for clarification when needed
+- You ensure data integrity in the standardization process
+
+When processing a size guide:
+1. First analyze and understand its complete structure
+2. Explain your reasoning about any non-obvious decisions
+3. Ask clarifying questions if critical information is ambiguous
+4. Provide clear explanations of your standardization choices
+
+Your goal is to ensure accurate, consistent size guide processing while being flexible enough to handle any format or edge case."""
+
+    def analyze_size_guide(self, image_analysis: Dict[str, Any], metadata: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Initialize the JesterChat instance.
+        Analyze a size guide using GPT-4's understanding and available context.
         
         Args:
-            vector_search: Optional JesterVectorSearch instance. If not provided,
-                          a new instance will be created.
+            image_analysis: The raw analysis from GPT-4 Vision
+            metadata: Basic metadata about the size guide
+            
+        Returns:
+            Dict containing structured analysis and recommendations
         """
-        self.vector_search = vector_search or JesterVectorSearch()
-        self.system_prompt = """You are Jester, an AI assistant specialized in menswear size guide standardization and analysis.
-Your expertise includes:
-1. Analyzing size charts and measurement tables
-2. Identifying measurement patterns and inconsistencies
-3. Suggesting standardized measurement approaches
-4. Handling edge cases in size guide interpretation
-5. Providing clear explanations of measurement methodologies
+        # Get relevant context from our knowledge base
+        context_results = self.vector_search.search(
+            f"size guide processing for {metadata.get('brand', '')} {metadata.get('category', '')}",
+            k=3
+        )
+        
+        # Build context from search results
+        context = "\n\n".join([
+            f"Context {i+1}:\n{result['text']}"
+            for i, result in enumerate(context_results)
+        ])
+        
+        # Prepare the analysis request
+        analysis_prompt = f"""
+Brand: {metadata.get('brand')}
+Category: {metadata.get('category')}
+Original Analysis: {image_analysis}
 
-When responding:
-- Be precise and technical in your analysis
-- Reference specific measurements and standards
-- Explain your reasoning clearly
-- Ask clarifying questions when needed
-- Suggest improvements to measurement methodologies
-- Consider international size standards when relevant"""
+Based on the size guide information above and this context:
+{context}
+
+Please provide:
+1. Standardized measurements and their reasoning
+2. Category confirmation or suggestion
+3. Any potential issues or ambiguities
+4. Recommendations for handling this size guide
+
+Explain your reasoning for any non-obvious decisions."""
+
+        # Get GPT-4's analysis
+        response = openai.chat.completions.create(
+            model=config.OPENAI_MODEL,
+            messages=[
+                {"role": "system", "content": self.system_prompt},
+                {"role": "user", "content": analysis_prompt}
+            ],
+            temperature=0.7
+        )
+        
+        # Extract and structure the response
+        analysis = response.choices[0].message.content
+        
+        # Add this analysis to our knowledge base for future reference
+        self.add_to_knowledge_base(
+            f"Size Guide Analysis - {metadata.get('brand')}:\n{analysis}",
+            metadata=metadata
+        )
+        
+        return {
+            "analysis": analysis,
+            "context_used": context_results,
+            "metadata": metadata
+        }
 
     def get_response(self, user_input: str, chat_history: List[Dict[str, str]] = None) -> str:
         """

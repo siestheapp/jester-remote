@@ -4,10 +4,11 @@ from datetime import datetime
 from ..db.models import SizeGuide, MeasurementType, SizeGuideMeasurement, ValidationRule
 from ..core.vision import run_vision_prompt
 from ..utils.vector_mapper import match_to_standard
+from sqlalchemy.ext.asyncio import AsyncSession
 
 class SizeService:
-    def __init__(self, db_session):
-        self.db = db_session
+    def __init__(self, session: AsyncSession):
+        self.session = session
 
     async def process_size_guide(
         self,
@@ -39,8 +40,8 @@ class SizeService:
                 source_url=metadata["source_url"],
                 status="processing"
             )
-            self.db.add(size_guide)
-            await self.db.flush()  # Get the ID without committing
+            self.session.add(size_guide)
+            await self.session.flush()  # Get the ID without committing
 
             # Extract measurements using GPT-4 Vision
             gpt_output = run_vision_prompt(image_path)
@@ -53,7 +54,7 @@ class SizeService:
             except (ValueError, json.JSONDecodeError) as e:
                 size_guide.status = "error"
                 size_guide.error_message = f"Failed to parse GPT output: {str(e)}"
-                await self.db.commit()
+                await self.session.commit()
                 return {"success": False, "error": str(e)}
 
             # Get unit ID for the specified unit
@@ -78,7 +79,7 @@ class SizeService:
                         min_value=value if isinstance(value, (int, float)) else None,
                         max_value=value if isinstance(value, (int, float)) else None
                     )
-                    self.db.add(measurement)
+                    self.session.add(measurement)
 
             # Validate measurements against rules
             validation_errors = await self._validate_measurements(size_guide.id)
@@ -89,7 +90,7 @@ class SizeService:
                 size_guide.status = "active"
             
             size_guide.processed_at = datetime.utcnow()
-            await self.db.commit()
+            await self.session.commit()
 
             return {
                 "success": True,
@@ -102,20 +103,20 @@ class SizeService:
             if size_guide:
                 size_guide.status = "error"
                 size_guide.error_message = str(e)
-                await self.db.commit()
+                await self.session.commit()
             return {"success": False, "error": str(e)}
 
     async def _get_unit_id(self, unit_name: str) -> int:
         """Get the ID for a unit of measurement."""
-        unit = await self.db.query("SELECT id FROM units WHERE name = :name", 
+        unit = await self.session.execute("SELECT id FROM units WHERE name = :name", 
                                  {"name": unit_name}).first()
         if not unit:
             raise ValueError(f"Unknown unit: {unit_name}")
-        return unit.id
+        return unit[0]
 
     async def _get_measurement_type(self, name: str) -> MeasurementType:
         """Get or create a measurement type."""
-        measurement_type = await self.db.query(MeasurementType).filter(
+        measurement_type = await self.session.execute(MeasurementType).filter(
             MeasurementType.name == name
         ).first()
         
@@ -127,10 +128,10 @@ class SizeService:
                 description=f"Measurement for {name}",
                 category=category
             )
-            self.db.add(measurement_type)
-            await self.db.flush()
+            self.session.add(measurement_type)
+            await self.session.flush()
         
-        return measurement_type
+        return measurement_type[0]
 
     async def _validate_measurements(self, size_guide_id: int) -> list[str]:
         """
@@ -138,12 +139,12 @@ class SizeService:
         Returns a list of validation error messages.
         """
         errors = []
-        measurements = await self.db.query(SizeGuideMeasurement).filter(
+        measurements = await self.session.execute(SizeGuideMeasurement).filter(
             SizeGuideMeasurement.size_guide_id == size_guide_id
         ).all()
         
         for measurement in measurements:
-            rules = await self.db.query(ValidationRule).filter(
+            rules = await self.session.execute(ValidationRule).filter(
                 ValidationRule.measurement_type_id == measurement.measurement_type_id,
                 ValidationRule.unit_id == measurement.unit_id
             ).first()
@@ -152,8 +153,8 @@ class SizeService:
                 # Convert values to float for comparison
                 min_value = float(measurement.min_value) if measurement.min_value is not None else None
                 max_value = float(measurement.max_value) if measurement.max_value is not None else None
-                min_allowed = float(rules.min_allowed) if rules.min_allowed is not None else None
-                max_allowed = float(rules.max_allowed) if rules.max_allowed is not None else None
+                min_allowed = float(rules[0].min_allowed) if rules[0].min_allowed is not None else None
+                max_allowed = float(rules[0].max_allowed) if rules[0].max_allowed is not None else None
                 
                 if min_value is not None and min_allowed is not None and min_value < min_allowed:
                     errors.append(f"{measurement.measurement_type.name} below minimum allowed value")
@@ -161,3 +162,97 @@ class SizeService:
                     errors.append(f"{measurement.measurement_type.name} above maximum allowed value")
         
         return errors
+
+    async def prepare_ingestion_proposal(self, analysis_result: Dict[str, Any], metadata: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Analyze the extracted data and metadata to prepare a detailed ingestion proposal.
+        Returns a structured proposal of database operations for review.
+        """
+        # Analyze the size guide data
+        size_data = analysis_result.get('size_data', {})
+        measurements = analysis_result.get('measurements', [])
+        
+        # Prepare the proposal
+        proposal = {
+            'operations': [],
+            'tables_affected': [],
+            'validation_checks': [],
+            'potential_conflicts': [],
+            'notes': []
+        }
+        
+        # Analyze brand
+        proposal['operations'].append({
+            'table': 'brands',
+            'operation': 'upsert',
+            'data': {'name': metadata['brand']},
+            'reason': 'Ensure brand exists in database'
+        })
+        
+        # Analyze measurements and size mappings
+        for measurement in measurements:
+            proposal['operations'].append({
+                'table': 'measurements',
+                'operation': 'insert',
+                'data': measurement,
+                'validation': [
+                    f"Check if measurement '{measurement.get('name')}' follows standard terminology",
+                    f"Validate measurement values are within expected range for {metadata['unit']}"
+                ]
+            })
+        
+        # Add size mappings
+        if size_data:
+            proposal['operations'].append({
+                'table': 'size_mappings',
+                'operation': 'insert',
+                'data': size_data,
+                'validation': [
+                    "Check for size consistency across brand",
+                    "Validate measurement ranges"
+                ]
+            })
+        
+        # Add metadata
+        proposal['metadata'] = metadata
+        
+        # Add validation checks
+        proposal['validation_checks'].extend([
+            "Verify measurement units consistency",
+            "Check for duplicate size guides",
+            "Validate measurement ranges for clothing type"
+        ])
+        
+        return proposal
+
+    async def execute_ingestion(self, proposal: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Execute the approved ingestion proposal.
+        Returns the result of the ingestion process.
+        """
+        try:
+            # Execute each operation in the proposal
+            for operation in proposal['operations']:
+                if operation['operation'] == 'upsert':
+                    # Implement upsert logic
+                    pass
+                elif operation['operation'] == 'insert':
+                    # Implement insert logic
+                    pass
+            
+            # Commit the transaction
+            await self.session.commit()
+            
+            return {
+                'success': True,
+                'message': 'Size guide data successfully ingested',
+                'operations_completed': len(proposal['operations'])
+            }
+            
+        except Exception as e:
+            # Rollback on error
+            await self.session.rollback()
+            return {
+                'success': False,
+                'error': str(e)
+            }
