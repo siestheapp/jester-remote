@@ -9,6 +9,7 @@ import json
 import asyncio
 import nest_asyncio
 import warnings
+import tempfile
 
 # Suppress specific warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="torch")
@@ -46,6 +47,20 @@ if "messages" not in st.session_state:
 
 # Title
 st.title("Jester - Size Guide Analysis Assistant")
+
+def save_uploaded_file(uploaded_file):
+    """Save uploaded file to temp directory and return the path."""
+    if uploaded_file is None:
+        return None
+    
+    # Create uploads directory if it doesn't exist
+    os.makedirs("uploads", exist_ok=True)
+    
+    # Save file to uploads directory
+    file_path = os.path.join("uploads", uploaded_file.name)
+    with open(file_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+    return file_path
 
 def process_metadata_submission():
     """Handle metadata form submission and transition to chat."""
@@ -159,20 +174,27 @@ elif st.session_state.current_step == "chat":
         # If this is the first response and metadata was provided
         if len(st.session_state.messages) == 2 and any(st.session_state.metadata.values()):
             if "yes" in prompt.lower():
-                # Process the image with provided metadata
+                # Save uploaded file and process the image with provided metadata
                 with st.spinner("Analyzing size guide image..."):
-                    analysis_result = process_size_guide_image(
-                        st.session_state.uploaded_image,
-                        st.session_state.metadata
-                    )
-                
-                analysis_message = f"""Thank you for confirming. I've analyzed the size guide image and here's what I found:
+                    file_path = save_uploaded_file(st.session_state.uploaded_image)
+                    if file_path:
+                        try:
+                            analysis_result = process_size_guide_image(
+                                image_path=file_path,
+                                metadata=st.session_state.metadata
+                            )
+                            
+                            analysis_message = f"""Thank you for confirming. I've analyzed the size guide image and here's what I found:
 
 {analysis_result}
 
 Would you like me to proceed with storing this data in the standardized format? I can explain any adjustments I'm planning to make."""
-                
-                st.session_state.messages.append({"role": "assistant", "content": analysis_message})
+                            
+                            st.session_state.messages.append({"role": "assistant", "content": analysis_message})
+                        except Exception as e:
+                            st.error(f"Error processing image: {str(e)}")
+                    else:
+                        st.error("Failed to process the uploaded file.")
             else:
                 correction_message = "I understand the information needs correction. Please let me know what needs to be changed, and I'll update it accordingly."
                 st.session_state.messages.append({"role": "assistant", "content": correction_message})
@@ -181,12 +203,15 @@ Would you like me to proceed with storing this data in the standardized format? 
             if len(st.session_state.messages) == 2:
                 # First response when no metadata was provided - analyze image
                 with st.spinner("Analyzing size guide image..."):
-                    analysis_result = process_size_guide_image(
-                        st.session_state.uploaded_image,
-                        {}  # Empty metadata
-                    )
-                
-                analysis_message = f"""I've taken a look at the size guide. Here's what I can see:
+                    file_path = save_uploaded_file(st.session_state.uploaded_image)
+                    if file_path:
+                        try:
+                            analysis_result = process_size_guide_image(
+                                image_path=file_path,
+                                metadata={}  # Empty metadata
+                            )
+                            
+                            analysis_message = f"""I've taken a look at the size guide. Here's what I can see:
 
 {analysis_result}
 
@@ -194,8 +219,12 @@ Let me ask you a few questions to help categorize this properly:
 1. This appears to be from which brand?
 2. Is this for men's, women's, or unisex clothing?
 3. What type of clothing does this size guide cover?"""
-                
-                st.session_state.messages.append({"role": "assistant", "content": analysis_message})
+                            
+                            st.session_state.messages.append({"role": "assistant", "content": analysis_message})
+                        except Exception as e:
+                            st.error(f"Error processing image: {str(e)}")
+                    else:
+                        st.error("Failed to process the uploaded file.")
             else:
                 # Get Jester's response for other messages
                 response = st.session_state.jester.get_response(

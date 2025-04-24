@@ -1,0 +1,2943 @@
+<files>
+<file name="a3-ingestion/.env.example">
+<![CDATA[
+# OpenAI API Key
+OPENAI_API_KEY=your_openai_api_key_here
+
+# Supabase PostgreSQL URL
+DATABASE_URL=your_database_url_here
+
+]]>
+</file>
+<file name="a3-ingestion/.gitignore">
+<![CDATA[
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Virtual Environment
+.env
+.venv
+venv/
+ENV/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Project specific
+uploads/
+logs/
+data/raw/
+data/processed/
+data/backups/
+
+]]>
+</file>
+<file name="a3-ingestion/app/__init__.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/app/__pycache__/__init__.cpython-313.pyc">
+<![CDATA[
+�
+
+�*�g���g)N�r��9/Users/seandavey/projects/A3/a3-ingestion/app/__init__.py�<module>rs�r
+]]>
+</file>
+<file name="a3-ingestion/app/api/__init__.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/app/api/chat_app.py">
+<![CDATA[
+import streamlit as st
+import os
+from dotenv import load_dotenv
+import openai
+
+# Load API key from .env
+load_dotenv("config.env")
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+st.set_page_config(page_title="A3 Chat", layout="wide")
+st.title("💬 A3 Chat Assistant")
+
+# Initialize conversation state
+if "messages" not in st.session_state:
+    st.session_state.messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are A3, an AI assistant helping design and normalize clothing size guides. "
+                "You can analyze examples, identify patterns, ask clarifying questions, and propose structured database schemas. "
+                "If the user uploads multiple size guides, suggest a unifying column model and fit transformation logic."
+            )
+        }
+    ]
+
+# Render all previous messages
+for msg in st.session_state.messages[1:]:  # Skip system prompt
+    st.chat_message(msg["role"]).write(msg["content"])
+
+# Chat input field
+user_prompt = st.chat_input("Ask A3 about size guide structure, fit zones, or schema design...")
+
+# Process input
+if user_prompt:
+    # Show user message
+    st.chat_message("user").write(user_prompt)
+    st.session_state.messages.append({"role": "user", "content": user_prompt})
+
+    # Call GPT-4 Turbo
+    response = openai.chat.completions.create(
+        model="gpt-4-turbo",
+        messages=st.session_state.messages,
+        max_tokens=1000,
+        temperature=0.7
+    )
+
+    assistant_reply = response.choices[0].message.content
+    st.chat_message("assistant").write(assistant_reply)
+    st.session_state.messages.append({"role": "assistant", "content": assistant_reply})
+
+]]>
+</file>
+<file name="a3-ingestion/app/api/routes.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/app/core/__init__.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/app/core/__pycache__/__init__.cpython-313.pyc">
+<![CDATA[
+�
+
+s*�g���g)N�r��>/Users/seandavey/projects/A3/a3-ingestion/app/core/__init__.py�<module>rs�r
+]]>
+</file>
+<file name="a3-ingestion/app/core/__pycache__/vision.cpython-313.pyc">
+<![CDATA[
+�
+
+1+�gh��@�SSKrSSKrSSKrSSKJr SSKJr \"S5r\"S\(aSOS35 \R"S	5r
+\"S
+\
+(aSOS35 \
+\l
+SrSr\
+S
+:Xa1Sr\"\5r\"S5 \"\5 \"S5 \"\"S55 gg)�N)�load_dotenv�)�match_to_standardz
+config.envu✅ .env loaded? �Yes�No�OPENAI_API_KEYu✅ API KEY FOUND? c��[US5n[R"UR55R	S5sSSS5 $!,(df   g=f)N�rbzutf-8)�open�base64�	b64encode�read�decode)�path�fs  �</Users/seandavey/projects/A3/a3-ingestion/app/core/vision.py�image_to_base64rs9��	
+�d�D�	�Q��������)�0�0��9�
+�	�	�s�3A
+�
+
+Ac	���[U5n[RRR	SSSSS.SSSU30S	./S
+./SS9nUR
+S
+RR$)Nzgpt-4-turbo�user�textaHere is a screenshot of a clothing size chart. Extract the measurements in structured JSON format. Do NOT double chest or waist values unless the label explicitly says something like '1/2 chest', 'pit to pit', or 'body width'. If it only says 'Chest' or 'Waist', assume it's a full-body circumference. Make sure the size chart is returned with clear measurement labels for each size.)�typer�	image_url�urlzdata:image/jpeg;base64,)rr)�role�contenti�)�model�messages�
+max_tokensr)r�openai�chat�completions�create�choices�messager)�
+image_path�base64_image�responses   r�run_vision_promptr(s���"�:�.�L��{�{�&�&�-�-���!'�p�	�!,�!�%<�\�N�#K�&���
+�
+�.�3.��H�8���A��&�&�.�.�.��__main__zuploads/sample_size_guide.jpgu🧠 GPT-4 Vision Output:u
+🧬 Vector Match Example:z
+Pit to Pit)rr�os�dotenvr�utils.vector_mapperr�
+env_loaded�print�getenv�api_keyrr(�__name__r�
+vision_output�r)r�<module>r5s���
+�
+�	��3���
+&�
+���:�%�4�8�9�:�
+�)�)�$�
+%����W�E�$�7�8�9����:�
+/�D�z��*�D�%�d�+�M�	�
+%�&�	�-��	�
+(�)�	�
+�L�
+)�*�r)
+]]>
+</file>
+<file name="a3-ingestion/app/core/a3_chat_vector.py">
+<![CDATA[
+import streamlit as st
+import openai
+import os
+import json
+import faiss
+import numpy as np
+from dotenv import load_dotenv
+import tiktoken
+
+load_dotenv("config.env")
+openai.api_key = os.getenv("OPENAI_API_KEY")
+ENCODER = tiktoken.get_encoding("cl100k_base")
+
+# Load chunks + FAISS
+def load_vector_data():
+    index = faiss.read_index("a3_knowledge.index")
+    with open("faiss_chunks.json", "r") as f:
+        chunks = json.load(f)
+    return index, chunks
+
+# Embed a query
+def embed_query(query):
+    response = openai.embeddings.create(
+        model="text-embedding-3-small",
+        input=query
+    )
+    return np.array(response.data[0].embedding).astype("float32")
+
+# Retrieve top N relevant chunks
+def retrieve_chunks(query, top_k=5):
+    index, chunks = load_vector_data()
+    vector = embed_query(query).reshape(1, -1)
+    distances, indices = index.search(vector, top_k)
+    return [chunks[i] for i in indices[0]]
+
+# Initialize UI
+st.set_page_config(page_title="💬 A3 Chat + Research Brain", layout="wide")
+st.title("🧠 A3 Chat – Embedded Size Guide Research")
+
+if "chat_history" not in st.session_state:
+    st.session_state.chat_history = []
+
+user_input = st.chat_input("Ask A3 a question about fit logic, category mapping, or edge cases...")
+
+if user_input:
+    with st.spinner("🔍 Searching embedded research..."):
+        context_chunks = retrieve_chunks(user_input)
+        system_prompt = (
+            "You are A3, an AI trained on menswear size guide standardization. "
+            "Base your response on the following deep research snippets:\n\n" +
+            "\n\n---\n\n".join(context_chunks)
+        )
+
+        messages = [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_input}
+        ]
+
+        response = openai.chat.completions.create(
+            model="gpt-4-turbo",
+            messages=messages,
+            max_tokens=1000,
+            temperature=0.4
+        )
+
+        reply = response.choices[0].message.content
+        st.session_state.chat_history.append(("user", user_input))
+        st.session_state.chat_history.append(("assistant", reply))
+
+# Display conversation
+for role, message in st.session_state.chat_history:
+    st.chat_message(role).write(message)
+
+# Optional: show retrieved chunks
+with st.expander("📚 View retrieved research chunks"):
+    for i, chunk in enumerate(retrieve_chunks(user_input or ""), 1):
+        st.markdown(f"**[{i}]** {chunk}")
+
+]]>
+</file>
+<file name="a3-ingestion/app/core/config.py">
+<![CDATA[
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
+
+# Database configuration
+DB_HOST = os.getenv("DB_HOST", "localhost")
+DB_PORT = os.getenv("DB_PORT", "5432")
+DB_NAME = os.getenv("DB_NAME", "tailor_a3")
+DB_USER = os.getenv("DB_USER", "postgres")
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+
+# API configuration
+API_HOST = os.getenv("API_HOST", "0.0.0.0")
+API_PORT = int(os.getenv("API_PORT", "8000"))
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
+
+# Vector database configuration
+VECTOR_DB_PATH = os.getenv("VECTOR_DB_PATH", "data/processed/a3_knowledge.index")
+CHUNKS_PATH = os.getenv("CHUNKS_PATH", "data/processed/faiss_chunks.json")
+
+# Data paths
+RAW_DATA_PATH = os.getenv("RAW_DATA_PATH", "data/raw")
+PROCESSED_DATA_PATH = os.getenv("PROCESSED_DATA_PATH", "data/processed")
+BACKUP_PATH = os.getenv("BACKUP_PATH", "data/backups")
+
+# Logging configuration
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
+LOG_PATH = os.getenv("LOG_PATH", "logs")
+
+]]>
+</file>
+<file name="a3-ingestion/app/core/vision.py">
+<![CDATA[
+import openai
+import base64
+import os
+from dotenv import load_dotenv
+from ..utils.vector_mapper import match_to_standard
+
+# Load the .env file
+env_loaded = load_dotenv("config.env")
+print(f"✅ .env loaded? {'Yes' if env_loaded else 'No'}")
+
+# Retrieve the API key from the environment
+api_key = os.getenv("OPENAI_API_KEY")
+print(f"✅ API KEY FOUND? {'Yes' if api_key else 'No'}")
+
+# Set it for the OpenAI SDK
+openai.api_key = api_key
+
+
+def image_to_base64(path):
+    with open(path, "rb") as f:
+        return base64.b64encode(f.read()).decode("utf-8")
+
+
+def run_vision_prompt(image_path):
+    base64_image = image_to_base64(image_path)
+
+    response = openai.chat.completions.create(
+        model="gpt-4-turbo",
+        messages=[
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": (
+                            "Here is a screenshot of a clothing size chart. "
+                            "Extract the measurements in structured JSON format. "
+                            "Do NOT double chest or waist values unless the label explicitly says something like '1/2 chest', 'pit to pit', or 'body width'. "
+                            "If it only says 'Chest' or 'Waist', assume it's a full-body circumference. "
+                            "Make sure the size chart is returned with clear measurement labels for each size."
+                        )
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                    }
+                ]
+            }
+        ],
+        max_tokens=2000
+    )
+
+    return response.choices[0].message.content
+
+
+if __name__ == "__main__":
+    path = "uploads/sample_size_guide.jpg"
+    vision_output = run_vision_prompt(path)
+    print("🧠 GPT-4 Vision Output:")
+    print(vision_output)
+
+    print("\n🧬 Vector Match Example:")
+    print(match_to_standard("Pit to Pit"))  # Expected: ('chest', ~0.90+ similarity)
+
+]]>
+</file>
+<file name="a3-ingestion/app/db/__init__.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/app/db/migrations.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/app/db/models.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/app/services/__init__.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/app/services/ingestion_service.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/app/services/size_service.py">
+<![CDATA[
+from typing import Dict, Any, Optional
+import json
+from datetime import datetime
+from ..db.models import SizeGuide, MeasurementType, SizeGuideMeasurement, ValidationRule
+from ..core.vision import run_vision_prompt
+from ..utils.vector_mapper import match_to_standard
+
+class SizeService:
+    def __init__(self, db_session):
+        self.db = db_session
+
+    async def process_size_guide(
+        self,
+        image_path: str,
+        metadata: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """
+        Process a size guide image and store normalized measurements.
+        
+        Args:
+            image_path: Path to the uploaded size guide image
+            metadata: Dictionary containing:
+                - brand: Brand name
+                - gender: Gender (Men, Women, Unisex)
+                - size_guide_header: Category header
+                - source_url: Source URL
+                - unit: Unit of measurement
+                - scope: Size guide scope
+        
+        Returns:
+            Dictionary containing processing results and status
+        """
+        try:
+            # Create size guide record
+            size_guide = SizeGuide(
+                brand=metadata["brand"],
+                gender=metadata["gender"],
+                category=metadata["size_guide_header"],
+                source_url=metadata["source_url"],
+                status="processing"
+            )
+            self.db.add(size_guide)
+            await self.db.flush()  # Get the ID without committing
+
+            # Extract measurements using GPT-4 Vision
+            gpt_output = run_vision_prompt(image_path)
+            
+            # Parse JSON from GPT output
+            try:
+                json_start = gpt_output.index("{")
+                json_end = gpt_output.rindex("}") + 1
+                measurements_data = json.loads(gpt_output[json_start:json_end])
+            except (ValueError, json.JSONDecodeError) as e:
+                size_guide.status = "error"
+                size_guide.error_message = f"Failed to parse GPT output: {str(e)}"
+                await self.db.commit()
+                return {"success": False, "error": str(e)}
+
+            # Get unit ID for the specified unit
+            unit_id = await self._get_unit_id(metadata["unit"])
+            
+            # Process each measurement
+            for size_label, measurements in measurements_data.items():
+                for measure_name, value in measurements.items():
+                    # Match the measurement name to our standard types
+                    standard_name = match_to_standard(measure_name)
+                    if not standard_name:
+                        continue  # Skip unrecognized measurements
+                    
+                    # Get or create measurement type
+                    measurement_type = await self._get_measurement_type(standard_name)
+                    
+                    # Create measurement record
+                    measurement = SizeGuideMeasurement(
+                        size_guide_id=size_guide.id,
+                        measurement_type_id=measurement_type.id,
+                        unit_id=unit_id,
+                        min_value=value if isinstance(value, (int, float)) else None,
+                        max_value=value if isinstance(value, (int, float)) else None
+                    )
+                    self.db.add(measurement)
+
+            # Validate measurements against rules
+            validation_errors = await self._validate_measurements(size_guide.id)
+            if validation_errors:
+                size_guide.status = "error"
+                size_guide.error_message = "Validation errors: " + ", ".join(validation_errors)
+            else:
+                size_guide.status = "active"
+            
+            size_guide.processed_at = datetime.utcnow()
+            await self.db.commit()
+
+            return {
+                "success": True,
+                "size_guide_id": size_guide.id,
+                "status": size_guide.status,
+                "measurements": measurements_data
+            }
+
+        except Exception as e:
+            if size_guide:
+                size_guide.status = "error"
+                size_guide.error_message = str(e)
+                await self.db.commit()
+            return {"success": False, "error": str(e)}
+
+    async def _get_unit_id(self, unit_name: str) -> int:
+        """Get the ID for a unit of measurement."""
+        unit = await self.db.query("SELECT id FROM units WHERE name = :name", 
+                                 {"name": unit_name}).first()
+        if not unit:
+            raise ValueError(f"Unknown unit: {unit_name}")
+        return unit.id
+
+    async def _get_measurement_type(self, name: str) -> MeasurementType:
+        """Get or create a measurement type."""
+        measurement_type = await self.db.query(MeasurementType).filter(
+            MeasurementType.name == name
+        ).first()
+        
+        if not measurement_type:
+            # Determine category based on name
+            category = "upper_body" if name in ["chest", "shoulder", "sleeve", "neck"] else "lower_body"
+            measurement_type = MeasurementType(
+                name=name,
+                description=f"Measurement for {name}",
+                category=category
+            )
+            self.db.add(measurement_type)
+            await self.db.flush()
+        
+        return measurement_type
+
+    async def _validate_measurements(self, size_guide_id: int) -> list[str]:
+        """
+        Validate measurements against rules.
+        Returns a list of validation error messages.
+        """
+        errors = []
+        measurements = await self.db.query(SizeGuideMeasurement).filter(
+            SizeGuideMeasurement.size_guide_id == size_guide_id
+        ).all()
+        
+        for measurement in measurements:
+            rules = await self.db.query(ValidationRule).filter(
+                ValidationRule.measurement_type_id == measurement.measurement_type_id,
+                ValidationRule.unit_id == measurement.unit_id
+            ).first()
+            
+            if rules:
+                if measurement.min_value and measurement.min_value < rules.min_allowed:
+                    errors.append(f"{measurement.measurement_type.name} below minimum allowed value")
+                if measurement.max_value and measurement.max_value > rules.max_allowed:
+                    errors.append(f"{measurement.measurement_type.name} above maximum allowed value")
+        
+        return errors
+
+]]>
+</file>
+<file name="a3-ingestion/app/utils/__init__.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/app/utils/__pycache__/__init__.cpython-313.pyc">
+<![CDATA[
+�
+
+�'�g���g)N�r��?/Users/seandavey/projects/A3/a3-ingestion/app/utils/__init__.py�<module>rs�r
+]]>
+</file>
+<file name="a3-ingestion/app/utils/__pycache__/vector_mapper.cpython-313.pyc">
+<![CDATA[
+�
+
+�1�gx"���%SSKrSSKrSSKrSSKJr SSKJrJrJ	r	J
+r
+Jr SSKJ
+r
+ SSKrSSKJr SSKr\"5 \R$"S5\l/SQr\
+"S5r1S	k1S
+k1Sk1Sk1S
+k1Sk1SkS.r\\\
+\4\S'0q0qSr\"5 SSjrSrSS\S\S\\4SjjrS\\\	\44Sjr "SS5r!g)�N)�load_dotenv)�Optional�Dict�List�Set�Any)�SentenceTransformer)�SequenceMatcher�OPENAI_API_KEY)�chest�waist�sleeve�neck�hipzall-MiniLM-L6-v2>�bustr�
+chest size�chest width�bust measurement�chest measurement�chest circumference>r
+�
+waist size�
+natural waist�waist measurement�waist circumference>r�seat�hip size�hip measurement�seat measurement�hip circumference>�inseam�
+inside leg�
+leg length�
+inseam length�inner leg measurement>r�collar�	neck size�collar size�neck measurement�neck circumference>r�
+arm length�
+sleeve length�arm measurement�sleeve measurement>�shoulder�shoulder width�across shoulder�shoulder breadth�shoulder measurement)rr
+rr rrr.�MEASUREMENT_CATEGORIESc�>�[5n[R5HGupURU5 UR	U5 UHnU[
+UR
+5'M MI [U5n[RU5n[[XE55qg)z1Pre-compute embeddings for all measurement terms.N)
+�setr3�items�add�update�_standard_lookup�lower�list�model�encode�dict�zip�_embeddings_cache)�	all_terms�standard�
+variations�	variation�
+terms_list�
+embeddingss      �D/Users/seandavey/projects/A3/a3-ingestion/app/utils/vector_mapper.py�_initialize_embeddingsrH8s�����I� 6� <� <� >����
+�
+�h������$�#�I�2:��Y�_�_�.�/�$�!?��i��J����j�)�J��S��8�9��c��[RRU/US9n[R"UR
+SR5$)N)�inputr<r)�openairF�create�np�array�data�	embedding)�textr<�responses   rG�
+get_embeddingrTKsE��� � �'�'��f��(��H��8�8�H�M�M�!�$�.�.�/�/rIc��[R"X5[RRU5[RRU5--$�N)rN�dot�linalg�norm)�a�bs  rG�cosine_similarityr\Rs4��
+�6�6�!�<�2�9�9�>�>�!�,�r�y�y�~�~�a�/@�@�A�ArI�measurement�	threshold�returnc�D�UR5R5nU[;a	[U$[R	U5nSnSn[
+R
+5H&upV[R"X&5nXs:�dM"UnUnM( X1:�aU[;a	[U$g)a
+Match a measurement name to its standard category using semantic similarity.
+
+Args:
+    measurement: The measurement name to standardize
+    threshold: Minimum similarity score to consider a match (0-1)
+
+Returns:
+    The standard measurement category or None if no match found
+�����N)	r:�stripr9r<r=r@r6rNrW)r]r^�measurement_embedding�max_similarity�
+best_match�termrQ�
+similaritys        rG�match_to_standardrhUs����#�#�%�+�+�-�K��&�&���,�,�"�L�L��5���N��J�,�2�2�4����V�V�1�=�
+��&�'�N��J�	5��"�z�5E�'E��
+�+�+�rIc�t�[R5VVs0sHupU[U5_M snn$s snnf)z�
+Get all standard measurement categories and their variations.
+
+Returns:
+    Dictionary mapping standard categories to lists of variations
+)r3r6r;)rBrCs  rG�get_measurement_categoriesrjys?��%;�$@�$@�$B��$B� �H�	�$�z�"�"�$B����s�4c�4�\rSrSrSrS\\\\44SjrS\\\44Sjr	S\S\4Sjr
+S	\S
+\S\4SjrSS\S
+\S\
+\4SjjrS\\S\\
+\4SjrS\\S\\
+\4SjrS\\4SjrS\\\\44SjrS\\\\4SS4SjrSrg)�VectorMapper�zx
+A utility class for mapping measurement terms to standardized categories
+using semantic similarity and exact matching.
+�measurement_mappingsc�z�[U[5(d[S5eXlUR	5Ulg)z�
+Initialize the VectorMapper with measurement mappings.
+
+Args:
+    measurement_mappings: Dictionary mapping standard terms to their variations
+z)measurement_mappings must be a dictionaryN)�
+isinstancer>�
+ValueError�	_mappings�_build_reverse_mappings�_reverse_mappings)�selfrns  rG�__init__�VectorMapper.__init__�s4���.��5�5��H�I�I�-��!%�!=�!=�!?��rIr_c��0nURR5H up#UHnX!UR5'M M" U$)z6Build reverse mappings for quick lookup of variations.)rrr6r:)ru�reverse_mappingsrBrCrDs     rGrs�$VectorMapper._build_reverse_mappings�sC����$(�N�N�$8�$8�$:� �H�'�	�6>����!2�3�(�%;� �rIrRc��[U[5(d[S5e[R"SSUR5R
+55$)zHNormalize text by removing extra whitespace and converting to lowercase.zInput must be a stringz\s+� )rp�str�	TypeError�re�subrbr:)rurRs  rG�_normalize_text�VectorMapper._normalize_text�s=���$��$�$��4�5�5��v�v�f�c�4�:�:�<�#5�#5�#7�8�8rI�text1�text2c�6�[SX5R5$)z/Calculate similarity ratio between two strings.N)r
+�ratio)rur�r�s   rG�_calculate_similarity�"VectorMapper._calculate_similarity�s���t�U�2�8�8�:�:rIr]�similarity_thresholdc�d�Uc[S5e[U[5(d[S5eUR	U5nU(dgX0R
+;aUR
+U$SnSnUR
+R
+5H(upgURX65nX�:�dMX�:�dM$UnUnM* U$)z�
+Map a measurement term to its standardized category.
+
+Args:
+    measurement: The measurement term to map
+    similarity_threshold: Minimum similarity score for semantic matching
+
+Returns:
+    Mapped standard term or None if no match found
+NzMeasurement cannot be NonezMeasurement must be a stringr)rqrpr}r~r�rtr6r�)	rur]r��
+normalizedre�
+best_scorerDrB�scores	         rG�map_measurement�VectorMapper.map_measurement�s������9�:�:��+�s�+�+��:�;�;��)�)�+�6�
+����/�/�/��)�)�*�5�5��
+��
+�#'�#9�#9�#?�#?�#A��I��.�.�z�E�E��!�e�&C�"�
+�%�
+�	$B��rI�measurementsc�N�UVs/sHo RU5PM sn$s snf)z�
+Map multiple measurements in batch.
+
+Args:
+    measurements: List of measurement terms to map
+
+Returns:
+    List of mapped standard terms (None for unmatched terms)
+�r�)rur��ms   rG�batch_map_measurements�#VectorMapper.batch_map_measurements�s%��2>�>��A�$�$�Q�'��>�>��>s�"c��^# �S[S[[4U4SjjnUVs/sH
+o2"U5PM nn[R"U6IShv�N$s snfN	7f)z�
+Asynchronously map multiple measurements.
+
+Args:
+    measurements: List of measurement terms to map
+
+Returns:
+    List of mapped standard terms (None for unmatched terms)
+r]r_c��.># �TRU5$7frVr�)r]rus �rG�
+map_single�=VectorMapper.async_batch_map_measurements.<locals>.map_single�s�����'�'��4�4�s�N)r}r�asyncio�gather)rur�r�r��taskss`    rG�async_batch_map_measurements�)VectorMapper.async_batch_map_measurements�sQ����	5�#�	5�(�3�-�	5�)5�5��1��A����5��^�^�U�+�+�+��6�+�s� A�A�A�A�
+Ac�H�[URR55$)zc
+Get list of all standard measurement categories.
+
+Returns:
+    List of standard measurement terms
+)r;rr�keys�rus rGrj�'VectorMapper.get_measurement_categories�s���D�N�N�'�'�)�*�*rIc�6�URR5$)zX
+Get the current measurement mappings.
+
+Returns:
+    Dictionary of measurement mappings
+)rr�copyr�s rG�get_measurement_mappings�%VectorMapper.get_measurement_mappings�s���~�~�"�"�$�$rI�new_mappingsNc��Uc[S5eURRU5 UR5Ulg)zq
+Update measurement mappings with new entries.
+
+Args:
+    new_mappings: Dictionary of new mappings to add/update
+Nznew_mappings cannot be None)rqrrr8rsrt)rur�s  rG�update_mappings�VectorMapper.update_mappingss9�����:�;�;������l�+�!%�!=�!=�!?��rI)rrrt)g333333�?)�__name__�
+__module__�__qualname__�__firstlineno__�__doc__rr}rrvrsr��floatr�rr�r�r�rjr�r��__static_attributes__�rIrGrlrl�s"���
+@�T�#�t�C�y�.�-A�@� ��c�3�h�� �9�C�9�C�9�;�3�;�s�;�u�;�'+�'��'�$�'�
+�#��	'�R
+?��3�i�
+?�
+�h�s�m�	�
+?�,��3�i�,�
+�h�s�m�	�,�&+�D��I�+�%�$�s�D��I�~�*>�%�@�D��d�3�i��,@�@�T�@rIrl)ztext-embedding-3-small)g�?)"rL�numpyrN�os�dotenvr�typingrrrrr�sentence_transformersr	r��difflibr
+r�getenv�api_key�STANDARD_FIELDSr<r3r}�__annotations__r@r9rHrTr\r�rhrjrlr�rIrG�<module>r�s���
+��	��1�1�5��#�	��
+����+�,���>��	�.�/������
+���3/���S�#�c�(�]�+��@����:�"��0�B�"�3�"�5�"�H�S�M�"�H
+�D��d�3�i��$8�
+�M@�M@rI
+]]>
+</file>
+<file name="a3-ingestion/app/utils/vector_mapper.py">
+<![CDATA[
+import openai
+import numpy as np
+import os
+from dotenv import load_dotenv
+from typing import Optional, Dict, List, Set, Any
+from sentence_transformers import SentenceTransformer
+import asyncio
+from difflib import SequenceMatcher
+import re
+
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+# You can expand this list as needed
+STANDARD_FIELDS = ["chest", "waist", "sleeve", "neck", "hip"]
+
+# Initialize the sentence transformer model
+model = SentenceTransformer('all-MiniLM-L6-v2')
+
+# Define standard measurement categories and their common variations
+MEASUREMENT_CATEGORIES: Dict[str, Set[str]] = {
+    "chest": {
+        "chest", "chest width", "chest circumference", "bust", 
+        "chest measurement", "chest size", "bust measurement"
+    },
+    "waist": {
+        "waist", "waist size", "waist circumference", 
+        "waist measurement", "natural waist"
+    },
+    "hip": {
+        "hip", "hip measurement", "hip circumference", 
+        "hip size", "seat", "seat measurement"
+    },
+    "inseam": {
+        "inseam", "inseam length", "inside leg", 
+        "leg length", "inner leg measurement"
+    },
+    "neck": {
+        "neck", "neck size", "collar", "collar size", 
+        "neck circumference", "neck measurement"
+    },
+    "sleeve": {
+        "sleeve", "sleeve length", "arm length", 
+        "sleeve measurement", "arm measurement"
+    },
+    "shoulder": {
+        "shoulder", "shoulder width", "across shoulder", 
+        "shoulder measurement", "shoulder breadth"
+    }
+}
+
+# Pre-compute embeddings for all standard measurements and variations
+_embeddings_cache = {}
+_standard_lookup = {}
+
+def _initialize_embeddings():
+    """Pre-compute embeddings for all measurement terms."""
+    global _embeddings_cache, _standard_lookup
+    
+    all_terms = set()
+    for standard, variations in MEASUREMENT_CATEGORIES.items():
+        all_terms.add(standard)
+        all_terms.update(variations)
+        for variation in variations:
+            _standard_lookup[variation.lower()] = standard
+    
+    # Compute embeddings for all terms
+    terms_list = list(all_terms)
+    embeddings = model.encode(terms_list)
+    _embeddings_cache = dict(zip(terms_list, embeddings))
+
+# Initialize embeddings on module load
+_initialize_embeddings()
+
+def get_embedding(text, model="text-embedding-3-small"):
+    response = openai.embeddings.create(
+        input=[text],
+        model=model
+    )
+    return np.array(response.data[0].embedding)
+
+def cosine_similarity(a, b):
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
+def match_to_standard(measurement: str, threshold: float = 0.75) -> Optional[str]:
+    """
+    Match a measurement name to its standard category using semantic similarity.
+    
+    Args:
+        measurement: The measurement name to standardize
+        threshold: Minimum similarity score to consider a match (0-1)
+    
+    Returns:
+        The standard measurement category or None if no match found
+    """
+    measurement = measurement.lower().strip()
+    
+    # Check for exact matches first
+    if measurement in _standard_lookup:
+        return _standard_lookup[measurement]
+    
+    # Compute embedding for the input measurement
+    measurement_embedding = model.encode(measurement)
+    
+    # Find the closest match
+    max_similarity = -1
+    best_match = None
+    
+    for term, embedding in _embeddings_cache.items():
+        similarity = np.dot(measurement_embedding, embedding)
+        if similarity > max_similarity:
+            max_similarity = similarity
+            best_match = term
+    
+    # Return the standard category if similarity is above threshold
+    if max_similarity >= threshold and best_match in _standard_lookup:
+        return _standard_lookup[best_match]
+    
+    return None
+
+def get_measurement_categories() -> Dict[str, List[str]]:
+    """
+    Get all standard measurement categories and their variations.
+    
+    Returns:
+        Dictionary mapping standard categories to lists of variations
+    """
+    return {
+        standard: list(variations)
+        for standard, variations in MEASUREMENT_CATEGORIES.items()
+    }
+
+class VectorMapper:
+    """
+    A utility class for mapping measurement terms to standardized categories
+    using semantic similarity and exact matching.
+    """
+
+    def __init__(self, measurement_mappings: Dict[str, List[str]]):
+        """
+        Initialize the VectorMapper with measurement mappings.
+
+        Args:
+            measurement_mappings: Dictionary mapping standard terms to their variations
+        """
+        if not isinstance(measurement_mappings, dict):
+            raise ValueError("measurement_mappings must be a dictionary")
+        
+        self._mappings = measurement_mappings
+        self._reverse_mappings = self._build_reverse_mappings()
+
+    def _build_reverse_mappings(self) -> Dict[str, str]:
+        """Build reverse mappings for quick lookup of variations."""
+        reverse_mappings = {}
+        for standard, variations in self._mappings.items():
+            for variation in variations:
+                reverse_mappings[variation.lower()] = standard
+        return reverse_mappings
+
+    def _normalize_text(self, text: str) -> str:
+        """Normalize text by removing extra whitespace and converting to lowercase."""
+        if not isinstance(text, str):
+            raise TypeError("Input must be a string")
+        return re.sub(r'\s+', ' ', text.strip().lower())
+
+    def _calculate_similarity(self, text1: str, text2: str) -> float:
+        """Calculate similarity ratio between two strings."""
+        return SequenceMatcher(None, text1, text2).ratio()
+
+    def map_measurement(
+        self, 
+        measurement: str, 
+        similarity_threshold: float = 0.85
+    ) -> Optional[str]:
+        """
+        Map a measurement term to its standardized category.
+
+        Args:
+            measurement: The measurement term to map
+            similarity_threshold: Minimum similarity score for semantic matching
+
+        Returns:
+            Mapped standard term or None if no match found
+        """
+        if measurement is None:
+            raise ValueError("Measurement cannot be None")
+        if not isinstance(measurement, str):
+            raise TypeError("Measurement must be a string")
+        
+        # Normalize input
+        normalized = self._normalize_text(measurement)
+        if not normalized:
+            return None
+
+        # Check exact matches first
+        if normalized in self._reverse_mappings:
+            return self._reverse_mappings[normalized]
+
+        # Try semantic matching
+        best_match = None
+        best_score = 0
+
+        for variation, standard in self._reverse_mappings.items():
+            score = self._calculate_similarity(normalized, variation)
+            if score > best_score and score >= similarity_threshold:
+                best_score = score
+                best_match = standard
+
+        return best_match
+
+    def batch_map_measurements(
+        self, 
+        measurements: List[str]
+    ) -> List[Optional[str]]:
+        """
+        Map multiple measurements in batch.
+
+        Args:
+            measurements: List of measurement terms to map
+
+        Returns:
+            List of mapped standard terms (None for unmatched terms)
+        """
+        return [self.map_measurement(m) for m in measurements]
+
+    async def async_batch_map_measurements(
+        self, 
+        measurements: List[str]
+    ) -> List[Optional[str]]:
+        """
+        Asynchronously map multiple measurements.
+
+        Args:
+            measurements: List of measurement terms to map
+
+        Returns:
+            List of mapped standard terms (None for unmatched terms)
+        """
+        async def map_single(measurement: str) -> Optional[str]:
+            return self.map_measurement(measurement)
+
+        tasks = [map_single(m) for m in measurements]
+        return await asyncio.gather(*tasks)
+
+    def get_measurement_categories(self) -> List[str]:
+        """
+        Get list of all standard measurement categories.
+
+        Returns:
+            List of standard measurement terms
+        """
+        return list(self._mappings.keys())
+
+    def get_measurement_mappings(self) -> Dict[str, List[str]]:
+        """
+        Get the current measurement mappings.
+
+        Returns:
+            Dictionary of measurement mappings
+        """
+        return self._mappings.copy()
+
+    def update_mappings(self, new_mappings: Dict[str, List[str]]) -> None:
+        """
+        Update measurement mappings with new entries.
+
+        Args:
+            new_mappings: Dictionary of new mappings to add/update
+        """
+        if new_mappings is None:
+            raise ValueError("new_mappings cannot be None")
+        
+        self._mappings.update(new_mappings)
+        self._reverse_mappings = self._build_reverse_mappings()
+
+]]>
+</file>
+<file name="a3-ingestion/data/migrations/001_fix_foreign_keys.sql">
+<![CDATA[
+-- Migration: Fix foreign keys and data consistency
+-- Created at: 2025-04-15
+
+-- Up Migration
+BEGIN;
+
+-- 1. Fix units first (as other tables depend on it)
+ALTER TABLE public.units
+    ADD CONSTRAINT units_name_unique UNIQUE (name);
+
+-- 2. Fix brands unit reference
+ALTER TABLE public.brands
+    ADD COLUMN default_unit_id integer;
+
+UPDATE public.brands b
+SET default_unit_id = (
+    SELECT id FROM public.units u 
+    WHERE u.name = b.default_unit
+);
+
+ALTER TABLE public.brands
+    ALTER COLUMN default_unit_id SET NOT NULL,
+    ADD CONSTRAINT fk_default_unit FOREIGN KEY (default_unit_id) REFERENCES public.units(id),
+    DROP COLUMN default_unit;
+
+-- 3. Fix ingestion_log gender reference and add unique constraint
+ALTER TABLE public.ingestion_log
+    ADD COLUMN gender_id integer,
+    ADD CONSTRAINT ingestion_uuid_unique UNIQUE (ingestion_uuid);
+
+UPDATE public.ingestion_log il
+SET gender_id = (
+    SELECT id FROM public.genders g 
+    WHERE g.name = il.gender
+);
+
+ALTER TABLE public.ingestion_log
+    ALTER COLUMN gender_id SET NOT NULL,
+    ADD CONSTRAINT fk_gender FOREIGN KEY (gender_id) REFERENCES public.genders(id),
+    DROP COLUMN gender;
+
+-- 4. Add missing foreign key constraints
+ALTER TABLE public.apparel_items
+    ADD CONSTRAINT fk_brand FOREIGN KEY (brand_id) REFERENCES public.brands(id),
+    ADD CONSTRAINT fk_gender FOREIGN KEY (gender_id) REFERENCES public.genders(id),
+    ADD CONSTRAINT fk_category FOREIGN KEY (category_id) REFERENCES public.categories(id),
+    ADD CONSTRAINT fk_subcategory FOREIGN KEY (subcategory_id) REFERENCES public.subcategories(id),
+    ADD CONSTRAINT fk_fit FOREIGN KEY (fit_id) REFERENCES public.fits(id),
+    ADD CONSTRAINT fk_unit FOREIGN KEY (unit_id) REFERENCES public.units(id),
+    ADD CONSTRAINT fk_ingestion FOREIGN KEY (ingestion_uuid) REFERENCES public.ingestion_log(ingestion_uuid);
+
+ALTER TABLE public.size_guides
+    ADD CONSTRAINT fk_brand FOREIGN KEY (brand_id) REFERENCES public.brands(id);
+
+ALTER TABLE public.size_aliases
+    ADD CONSTRAINT fk_brand FOREIGN KEY (brand_id) REFERENCES public.brands(id),
+    ADD CONSTRAINT fk_gender FOREIGN KEY (gender_id) REFERENCES public.genders(id);
+
+-- 5. Add indexes for foreign keys for better performance
+CREATE INDEX idx_apparel_brand ON public.apparel_items(brand_id);
+CREATE INDEX idx_apparel_gender ON public.apparel_items(gender_id);
+CREATE INDEX idx_apparel_category ON public.apparel_items(category_id);
+CREATE INDEX idx_apparel_subcategory ON public.apparel_items(subcategory_id);
+CREATE INDEX idx_apparel_fit ON public.apparel_items(fit_id);
+CREATE INDEX idx_apparel_unit ON public.apparel_items(unit_id);
+CREATE INDEX idx_apparel_ingestion ON public.apparel_items(ingestion_uuid);
+
+CREATE INDEX idx_sizeguides_brand ON public.size_guides(brand_id);
+CREATE INDEX idx_sizealiases_brand ON public.size_aliases(brand_id);
+CREATE INDEX idx_sizealiases_gender ON public.size_aliases(gender_id);
+
+COMMIT;
+
+-- Down Migration (in case we need to rollback)
+BEGIN;
+
+-- Remove indexes
+DROP INDEX IF EXISTS public.idx_apparel_brand;
+DROP INDEX IF EXISTS public.idx_apparel_gender;
+DROP INDEX IF EXISTS public.idx_apparel_category;
+DROP INDEX IF EXISTS public.idx_apparel_subcategory;
+DROP INDEX IF EXISTS public.idx_apparel_fit;
+DROP INDEX IF EXISTS public.idx_apparel_unit;
+DROP INDEX IF EXISTS public.idx_apparel_ingestion;
+DROP INDEX IF EXISTS public.idx_sizeguides_brand;
+DROP INDEX IF EXISTS public.idx_sizealiases_brand;
+DROP INDEX IF EXISTS public.idx_sizealiases_gender;
+
+-- Remove foreign key constraints
+ALTER TABLE public.apparel_items
+    DROP CONSTRAINT IF EXISTS fk_brand,
+    DROP CONSTRAINT IF EXISTS fk_gender,
+    DROP CONSTRAINT IF EXISTS fk_category,
+    DROP CONSTRAINT IF EXISTS fk_subcategory,
+    DROP CONSTRAINT IF EXISTS fk_fit,
+    DROP CONSTRAINT IF EXISTS fk_unit,
+    DROP CONSTRAINT IF EXISTS fk_ingestion;
+
+ALTER TABLE public.size_guides
+    DROP CONSTRAINT IF EXISTS fk_brand;
+
+ALTER TABLE public.size_aliases
+    DROP CONSTRAINT IF EXISTS fk_brand,
+    DROP CONSTRAINT IF EXISTS fk_gender;
+
+-- Restore ingestion_log gender column and remove unique constraint
+ALTER TABLE public.ingestion_log
+    ADD COLUMN gender text,
+    DROP CONSTRAINT IF EXISTS ingestion_uuid_unique;
+
+UPDATE public.ingestion_log il
+SET gender = (
+    SELECT name FROM public.genders g 
+    WHERE g.id = il.gender_id
+);
+
+ALTER TABLE public.ingestion_log
+    DROP CONSTRAINT IF EXISTS fk_gender,
+    DROP COLUMN gender_id;
+
+-- Restore brands default_unit column
+ALTER TABLE public.brands
+    ADD COLUMN default_unit text DEFAULT 'inches'::text;
+
+UPDATE public.brands b
+SET default_unit = (
+    SELECT name FROM public.units u 
+    WHERE u.id = b.default_unit_id
+);
+
+ALTER TABLE public.brands
+    DROP CONSTRAINT IF EXISTS fk_default_unit,
+    DROP COLUMN default_unit_id;
+
+-- Remove units unique constraint
+ALTER TABLE public.units
+    DROP CONSTRAINT IF EXISTS units_name_unique;
+
+COMMIT; 
+]]>
+</file>
+<file name="a3-ingestion/data/migrations/002_measurement_normalization.sql">
+<![CDATA[
+-- Migration: 002_measurement_normalization
+-- Created: 2025-04-15
+-- Description: Normalizes measurement storage and adds validation support
+
+-- Up Migration
+BEGIN;
+
+-- Create measurement_types table
+CREATE TABLE measurement_types (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT,
+    category VARCHAR(30) NOT NULL, -- e.g., 'chest', 'waist', 'inseam'
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create size_guide_measurements table
+CREATE TABLE size_guide_measurements (
+    id SERIAL PRIMARY KEY,
+    size_guide_id INTEGER NOT NULL REFERENCES size_guides(id) ON DELETE CASCADE,
+    measurement_type_id INTEGER NOT NULL REFERENCES measurement_types(id),
+    unit_id INTEGER NOT NULL REFERENCES units(id),
+    min_value DECIMAL(10,2),
+    max_value DECIMAL(10,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(size_guide_id, measurement_type_id)
+);
+
+-- Create validation_rules table
+CREATE TABLE validation_rules (
+    id SERIAL PRIMARY KEY,
+    measurement_type_id INTEGER NOT NULL REFERENCES measurement_types(id),
+    unit_id INTEGER NOT NULL REFERENCES units(id),
+    min_allowed DECIMAL(10,2),
+    max_allowed DECIMAL(10,2),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(measurement_type_id, unit_id)
+);
+
+-- Modify size_guides table
+ALTER TABLE size_guides
+ADD COLUMN status VARCHAR(20) DEFAULT 'pending',
+ADD COLUMN error_message TEXT,
+ADD COLUMN processed_at TIMESTAMP WITH TIME ZONE;
+
+-- Create indexes
+CREATE INDEX idx_size_guide_measurements_size_guide_id ON size_guide_measurements(size_guide_id);
+CREATE INDEX idx_size_guide_measurements_measurement_type_id ON size_guide_measurements(measurement_type_id);
+CREATE INDEX idx_size_guide_measurements_unit_id ON size_guide_measurements(unit_id);
+
+-- Insert common measurement types
+INSERT INTO measurement_types (name, description, category) VALUES
+('chest', 'Circumference of chest at widest point', 'upper_body'),
+('waist', 'Natural waist circumference', 'lower_body'),
+('inseam', 'Length from crotch to ankle', 'lower_body'),
+('shoulder', 'Shoulder width point to point', 'upper_body'),
+('sleeve', 'Length from shoulder to wrist', 'upper_body'),
+('neck', 'Neck circumference', 'upper_body'),
+('hip', 'Hip circumference at widest point', 'lower_body'),
+('thigh', 'Thigh circumference', 'lower_body');
+
+COMMIT;
+
+-- Down Migration
+BEGIN;
+
+-- Remove added columns from size_guides
+ALTER TABLE size_guides
+DROP COLUMN status,
+DROP COLUMN error_message,
+DROP COLUMN processed_at;
+
+-- Drop tables in reverse order of creation
+DROP TABLE IF EXISTS validation_rules;
+DROP TABLE IF EXISTS size_guide_measurements;
+DROP TABLE IF EXISTS measurement_types;
+
+COMMIT; 
+]]>
+</file>
+<file name="a3-ingestion/data/migrations/003_enable_rls.sql">
+<![CDATA[
+-- Migration: Enable Row Level Security
+-- Created at: 2025-04-15
+-- Description: Enables RLS on all public tables and adds appropriate policies
+
+-- Up Migration
+BEGIN;
+
+-- Enable RLS on all tables
+ALTER TABLE public.ingestion_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.genders ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.categories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subcategories ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.apparel_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.units ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.size_aliases ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.brands ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.size_guides ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.size_guide_measurements ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.measurement_types ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.validation_rules ENABLE ROW LEVEL SECURITY;
+
+-- Create policies for authenticated access
+CREATE POLICY "Enable read access for authenticated users" ON public.ingestion_log
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.genders
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.categories
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.subcategories
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.fits
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.apparel_items
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.units
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.size_aliases
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.brands
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.size_guides
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.size_guide_measurements
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.measurement_types
+    FOR SELECT TO authenticated USING (true);
+
+CREATE POLICY "Enable read access for authenticated users" ON public.validation_rules
+    FOR SELECT TO authenticated USING (true);
+
+COMMIT;
+
+-- Down Migration
+BEGIN;
+
+-- Disable RLS on all tables
+ALTER TABLE public.ingestion_log DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.genders DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.categories DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.subcategories DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.fits DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.apparel_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.units DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.size_aliases DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.brands DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.size_guides DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.size_guide_measurements DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.measurement_types DISABLE ROW LEVEL SECURITY;
+ALTER TABLE public.validation_rules DISABLE ROW LEVEL SECURITY;
+
+-- Drop policies
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.ingestion_log;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.genders;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.categories;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.subcategories;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.fits;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.apparel_items;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.units;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.size_aliases;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.brands;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.size_guides;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.size_guide_measurements;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.measurement_types;
+DROP POLICY IF EXISTS "Enable read access for authenticated users" ON public.validation_rules;
+
+COMMIT; 
+]]>
+</file>
+<file name="a3-ingestion/docs/api/README.md">
+<![CDATA[
+# API Documentation
+
+## Overview
+
+The A3 Ingestion Service provides a RESTful API for ingesting and processing men's clothing size data. The API is built using FastAPI and provides endpoints for data ingestion, size guide processing, and size recommendations.
+
+## Base URL
+
+```
+http://localhost:8000
+```
+
+## Authentication
+
+The API uses environment variables for configuration. Make sure to set up your `.env` file with the required credentials:
+
+```bash
+OPENAI_API_KEY=your_api_key_here
+```
+
+## Endpoints
+
+### Size Guide Ingestion
+
+#### POST /api/ingest
+
+Upload and process a size guide image.
+
+**Request:**
+- Content-Type: multipart/form-data
+- Body:
+  - `file`: Image file (JPG, JPEG, or PNG)
+  - `brand`: Brand name
+  - `gender`: Gender (Men, Women, Unisex)
+  - `size_guide_header`: Category header
+  - `source_url`: Source URL
+  - `unit`: Unit of measurement (inches, centimeters)
+  - `scope`: Size guide scope
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "extracted_size_chart": {...},
+    "metadata": {...}
+  }
+}
+```
+
+### Size Recommendations
+
+#### GET /api/size-recommendations
+
+Get size recommendations based on measurements.
+
+**Query Parameters:**
+- `chest`: Chest measurement
+- `waist`: Waist measurement
+- `sleeve`: Sleeve length
+- `neck`: Neck size
+- `hip`: Hip measurement
+- `brand`: Target brand
+- `category`: Clothing category
+
+**Response:**
+```json
+{
+  "recommended_size": "M",
+  "confidence": 0.95,
+  "measurements": {...}
+}
+```
+
+## Error Handling
+
+The API uses standard HTTP status codes:
+
+- 200: Success
+- 400: Bad Request
+- 401: Unauthorized
+- 404: Not Found
+- 500: Internal Server Error
+
+Error responses include a message and error code:
+
+```json
+{
+  "error": "Error message",
+  "code": "ERROR_CODE"
+}
+```
+
+## Rate Limiting
+
+The API is rate-limited to prevent abuse. Current limits:
+- 100 requests per minute per IP
+- 1000 requests per hour per API key
+
+## Development
+
+To run the API server locally:
+
+```bash
+python main.py
+```
+
+The API will be available at `http://localhost:8000`.
+
+]]>
+</file>
+<file name="a3-ingestion/docs/architecture/ARCHITECTURE.md">
+<![CDATA[
+# System Architecture
+
+## Database Schema
+
+### Core Tables
+
+1. **apparel_items**
+   - Primary table for storing clothing measurements
+   - Links to brands, categories, and fits
+   - Stores measurement ranges (min/max) for various body parts
+
+2. **brands**
+   - Stores brand information
+   - Includes default unit system (inches/cm)
+
+3. **categories** and **subcategories**
+   - Hierarchical organization of clothing types
+   - Categories: tops, bottoms, outerwear, etc.
+   - Subcategories: dress shirts, t-shirts, jeans, etc.
+
+4. **fits**
+   - Stores different fit types (slim, regular, relaxed)
+   - Includes descriptions and gender associations
+
+5. **size_guides**
+   - Brand-specific size guide information
+   - Similar structure to apparel_items
+   - Includes source URLs and ingestion metadata
+
+6. **size_aliases**
+   - Maps different size labels to standardized sizes
+   - Helps with cross-brand size comparison
+
+### Supporting Tables
+
+1. **genders**
+   - Basic gender categorization
+
+2. **units**
+   - Measurement unit systems
+
+3. **ingestion_log**
+   - Tracks data ingestion processes
+   - Stores metadata about source files
+
+## Data Flow
+
+1. **Data Ingestion**
+   - Source files → ingestion_log
+   - Parsed data → size_guides
+   - Processed data → apparel_items
+
+2. **Size Processing**
+   - Raw measurements → standardized units
+   - Brand-specific sizes → size_aliases
+   - Category/fit assignment
+
+## Current Issues and TODOs
+
+1. **Database Improvements Needed**
+   - Add foreign key constraints
+   - Create missing indexes
+   - Add data validation constraints
+   - Implement proper unit conversion
+
+2. **Data Quality**
+   - Standardize measurement units
+   - Validate size ranges
+   - Ensure consistent category hierarchy
+
+3. **Performance Considerations**
+   - Index optimization
+   - Query optimization
+   - Data partitioning strategy
+
+## API Structure
+
+[To be documented]
+
+## Frontend Components
+
+[To be documented] 
+]]>
+</file>
+<file name="a3-ingestion/docs/architecture/README.md">
+<![CDATA[
+# Architecture Documentation
+
+## System Overview
+
+The A3 Ingestion Service is a comprehensive system for processing and standardizing men's clothing size data across different brands. The architecture is designed to handle the complexities of size guide ingestion, processing, and recommendation generation.
+
+## Core Components
+
+### 1. Data Ingestion Layer
+- Handles image uploads and processing
+- Uses GPT-4 Vision for extracting measurements from size charts
+- Validates and standardizes input data
+- Stores raw data in the database
+
+### 2. Processing Layer
+- Converts measurements to standardized units
+- Maps brand-specific sizes to standard sizes
+- Handles category and fit assignments
+- Generates embeddings for vector search
+
+### 3. Storage Layer
+- PostgreSQL database for structured data
+- FAISS vector database for semantic search
+- File storage for images and processed data
+
+### 4. API Layer
+- RESTful API endpoints
+- Authentication and authorization
+- Rate limiting and error handling
+- Response formatting
+
+## Database Schema
+
+### Core Tables
+
+1. **apparel_items**
+   - Primary table for storing clothing measurements
+   - Links to brands, categories, and fits
+   - Stores measurement ranges (min/max) for various body parts
+
+2. **brands**
+   - Stores brand information
+   - Includes default unit system (inches/cm)
+
+3. **categories** and **subcategories**
+   - Hierarchical organization of clothing types
+   - Categories: tops, bottoms, outerwear, etc.
+   - Subcategories: dress shirts, t-shirts, jeans, etc.
+
+4. **fits**
+   - Stores different fit types (slim, regular, relaxed)
+   - Includes descriptions and gender associations
+
+5. **size_guides**
+   - Brand-specific size guide information
+   - Similar structure to apparel_items
+   - Includes source URLs and ingestion metadata
+
+6. **size_aliases**
+   - Maps different size labels to standardized sizes
+   - Helps with cross-brand size comparison
+
+### Supporting Tables
+
+1. **genders**
+   - Basic gender categorization
+
+2. **units**
+   - Measurement unit systems
+
+3. **ingestion_log**
+   - Tracks data ingestion processes
+   - Stores metadata about source files
+
+## Data Flow
+
+1. **Data Ingestion**
+   - Source files → ingestion_log
+   - Parsed data → size_guides
+   - Processed data → apparel_items
+
+2. **Size Processing**
+   - Raw measurements → standardized units
+   - Brand-specific sizes → size_aliases
+   - Category/fit assignment
+
+## Vector Search
+
+The system uses FAISS for vector similarity search:
+- Text chunks are embedded using OpenAI's embedding model
+- Embeddings are stored in a FAISS index
+- Similarity search is used for finding relevant size guides
+
+## Security
+
+- Environment variables for sensitive data
+- API key authentication
+- Rate limiting
+- Input validation
+- SQL injection prevention
+
+## Performance Considerations
+
+1. **Database Optimization**
+   - Indexed fields for common queries
+   - Partitioned tables for large datasets
+   - Regular maintenance and cleanup
+
+2. **Vector Search**
+   - Optimized index structure
+   - Batch processing for embeddings
+   - Caching of common queries
+
+3. **API Performance**
+   - Response caching
+   - Asynchronous processing
+   - Load balancing ready
+
+## Monitoring and Logging
+
+- Application logs in `logs/` directory
+- Error tracking and reporting
+- Performance metrics collection
+- Database query monitoring
+
+## Deployment
+
+The system is designed to be deployed using:
+- Docker containers
+- Environment-based configuration
+- Database migrations
+- Backup and recovery procedures
+
+## Future Improvements
+
+1. **Database Enhancements**
+   - Add foreign key constraints
+   - Create missing indexes
+   - Add data validation constraints
+   - Implement proper unit conversion
+
+2. **Data Quality**
+   - Standardize measurement units
+   - Validate size ranges
+   - Ensure consistent category hierarchy
+
+3. **Performance Optimization**
+   - Index optimization
+   - Query optimization
+   - Data partitioning strategy
+
+]]>
+</file>
+<file name="a3-ingestion/docs/CHANGELOG.md">
+<![CDATA[
+# Changelog
+
+All notable changes to this project will be documented in this file.
+
+## [Unreleased]
+
+### Added
+- Initial project setup
+- Basic database schema
+- Data ingestion pipeline
+- Size guide processing
+- Brand-specific size mapping
+
+### Changed
+- Database schema refinements
+- Measurement unit standardization
+
+### Fixed
+- Database consistency issues
+- Missing foreign key constraints
+- Incomplete indexes
+
+## [0.1.0] - 2025-04-14
+
+### Added
+- Initial database setup
+- Core tables creation
+- Basic data ingestion
+- Size guide processing
+- Brand management
+- Category hierarchy
+- Fit type management
+
+### Known Issues
+- Missing foreign key constraints
+- Incomplete indexing
+- Inconsistent measurement units
+- Redundant data storage between apparel_items and size_guides
+- No validation for measurement ranges
+- Incomplete category hierarchy enforcement 
+]]>
+</file>
+<file name="a3-ingestion/docs/daily/2025-04-15.md">
+<![CDATA[
+# Daily Progress Log - 2025-04-15
+
+## What was accomplished
+- Analyzed database schema for inconsistencies
+- Created documentation structure
+- Identified key areas for improvement
+- Set up project tracking system
+
+## Challenges faced
+- Database lacks proper constraints and indexes
+- Inconsistent measurement unit handling
+- Redundant data storage between tables
+- Missing documentation and tracking system
+
+## Decisions made
+- Created structured documentation system
+- Prioritized database improvements
+- Established clear TODO list
+- Set up daily progress tracking
+
+## Next steps
+1. Implement high-priority database improvements:
+   - Add foreign key constraints
+   - Create necessary indexes
+   - Add data validation constraints
+2. Standardize measurement unit handling
+3. Clean up redundant data storage
+4. Begin implementing size recommendation algorithm
+
+## Questions/Concerns
+- How to handle unit conversion efficiently?
+- Should we consolidate apparel_items and size_guides tables?
+- What's the best approach for brand-specific sizing rules?
+- How to ensure data consistency during ingestion?
+
+## Notes
+- Need to review current data ingestion process
+- Consider adding data validation layer
+- Look into caching strategies for frequently accessed data
+- Plan needed for handling international size standards 
+]]>
+</file>
+<file name="a3-ingestion/docs/database/CHANGELOG.md">
+<![CDATA[
+# Database Changelog
+
+This document tracks all significant changes to the database schema.
+
+## [002] - 2025-04-15 - Measurement Normalization
+
+### Added
+- `measurement_types` table
+  - Standardizes measurement names and descriptions
+  - Includes common measurements like chest, waist, sleeve, neck, etc.
+  - Enforces unique measurement names
+
+- `size_guide_measurements` table
+  - Links measurements to size guides
+  - Stores min/max values for each measurement
+  - References measurement types and units
+  - Ensures unique measurements per size guide
+
+- `validation_rules` table
+  - Defines allowed ranges for measurements
+  - Links to measurement types and units
+  - Initial rules added for chest, waist, and neck measurements
+
+### Modified
+- `size_guides` table
+  - Added `status` column (values: draft, processing, active, error)
+  - Added `error_message` column for tracking issues
+  - Added `processed_at` timestamp
+
+### Indexes
+- Created index on `size_guide_measurements(size_guide_id)`
+- Created index on `size_guide_measurements(measurement_type_id)`
+- Created index on `size_guide_measurements(unit_id)`
+
+### Data Migration
+- Migrated existing measurement data from the `size_guides` table to the new normalized structure
+- Preserved all existing measurement values
+- Defaulted to inches for unit where not specified
+
+### Purpose
+This migration normalizes the storage of measurements in the database, making it easier to:
+- Validate measurement data during ingestion
+- Support multiple measurement systems
+- Track the status of size guide processing
+- Ensure data consistency through proper constraints
+
+### Rollback
+The migration includes a down script that will:
+- Remove the validation_rules table
+- Remove new columns from size_guides
+- Remove the size_guide_measurements table
+- Remove the measurement_types table
+
+### Migration File
+- Location: `data/migrations/002_measurement_normalization.sql`
+- Execution Script: `scripts/run_migration.py` 
+]]>
+</file>
+<file name="a3-ingestion/docs/README.md">
+<![CDATA[
+# Tailor A3 Project
+
+## Project Overview
+This project is a men's clothing size guide system that helps users find their correct size across different brands. It includes a database of size measurements, brand-specific sizing information, and tools for ingesting and managing size guide data.
+
+## Project Structure
+```
+a3-ingestion/
+├── docs/               # Documentation
+├── knowledge/          # Research and knowledge base
+├── logs/              # Application logs
+├── uploads/           # File uploads
+└── various Python files for different functionalities
+```
+
+## Setup Instructions
+1. Create a virtual environment:
+   ```bash
+   python -m venv .venv
+   source .venv/bin/activate  # On Unix/macOS
+   ```
+
+2. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+3. Configure environment variables:
+   - Copy `config.env.example` to `config.env`
+   - Update the values in `config.env`
+
+4. Initialize the database:
+   - Use the provided SQL dump files to set up the database schema
+   - Run any necessary migrations
+
+## Documentation
+- `ARCHITECTURE.md`: System design and database schema
+- `CHANGELOG.md`: Version history and changes
+- `TODO.md`: Current tasks and future plans
+- `daily/`: Daily progress logs
+
+## Current Status
+[To be updated with current project status]
+
+## Next Steps
+[To be updated with immediate next steps] 
+]]>
+</file>
+<file name="a3-ingestion/docs/Supabase Performance Security Lints (lntahfecexbduagqdhrr).csv">
+<![CDATA[
+name,title,level,facing,categories,description,detail,remediation,metadata,cache_key
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.ingestion_log\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""ingestion_log"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_ingestion_log
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.genders\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""genders"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_genders
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.categories\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""categories"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_categories
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.subcategories\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""subcategories"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_subcategories
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.fits\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""fits"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_fits
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.apparel_items\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""apparel_items"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_apparel_items
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.units\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""units"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_units
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.size_aliases\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""size_aliases"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_size_aliases
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.brands\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""brands"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_brands
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.size_guides\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""size_guides"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_size_guides
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.size_guide_measurements\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""size_guide_measurements"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_size_guide_measurements
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.measurement_types\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""measurement_types"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_measurement_types
+rls_disabled_in_public,RLS Disabled in Public,ERROR,EXTERNAL,"[""SECURITY""]",Detects cases where row level security (RLS) has not been enabled on tables in schemas exposed to PostgREST,"Table \`public.validation_rules\` is public, but RLS has not been enabled.",https://supabase.com/docs/guides/database/database-linter?lint=0013_rls_disabled_in_public,"{""name"":""validation_rules"",""type"":""table"",""schema"":""public""}",rls_disabled_in_public_public_validation_rules
+]]>
+</file>
+<file name="a3-ingestion/docs/today.md">
+<![CDATA[
+# April 15 
+
+1. we cleaned up the codebase structure and this is how to activate the streamlit site starting from a blank A3 terminal:
+
+active streamlit through terminal:
+
+    seandavey@MacBook-Air A3 % cd a3-ingestion
+    seandavey@MacBook-Air a3-ingestion % source .venv/bin/activate
+    (.venv) seandavey@MacBook-Air a3-ingestion % streamlit run ui/streamlit_app.py
+
+     You can now view your Streamlit app in your browser.
+
+        Local URL: http://localhost:8501
+        Network URL: http://192.168.1.22:8501
+
+        For better performance, install the Watchdog module:
+
+        $ xcode-select --install
+        $ pip install watchdog
+                    
+        ✅ .env loaded? No
+        ✅ API KEY FOUND? Yes
+
+2. fixed database foreign key constraints and added proper indexes:
+
+run database migration:
+
+    (.venv) seandavey@MacBook-Air a3-ingestion % python scripts/run_migration.py up
+    Running UP migration...
+    Migration up completed successfully!
+
+    # to rollback if needed:
+    python scripts/run_migration.py down
+
+3. Implemented VectorMapper utility for measurement term standardization:
+
+   - Created a robust utility class for mapping measurement terms to standardized categories
+   - Features include:
+     - Exact matching with O(1) lookup using reverse mappings
+     - Semantic matching with configurable similarity threshold
+     - Batch processing (sync and async)
+     - Text normalization and error handling
+   - Comprehensive test suite with property-based testing
+   - Demo script for showcasing functionality
+   - Integration with size service for standardized measurement processing
+
+
+]]>
+</file>
+<file name="a3-ingestion/docs/TODO.md">
+<![CDATA[
+# TODO List
+
+## High Priority
+
+### Database Improvements
+- [ ] Add foreign key constraints to all related tables
+- [ ] Create indexes on frequently queried columns
+- [ ] Add PRIMARY KEY constraints
+- [ ] Implement CHECK constraints for measurement ranges
+- [ ] Add NOT NULL constraints where appropriate
+- [ ] Standardize unit handling across tables
+
+### Data Quality
+- [ ] Implement data validation for measurement ranges
+- [ ] Add constraints to ensure category hierarchy integrity
+- [ ] Standardize size label formats
+- [ ] Clean up redundant data between tables
+- [ ] Implement proper unit conversion system
+
+### Performance
+- [ ] Optimize database queries
+- [ ] Add appropriate indexes
+- [ ] Implement caching where needed
+- [ ] Optimize data ingestion process
+
+## Medium Priority
+
+### Features
+- [ ] Implement size recommendation algorithm
+- [ ] Add brand-specific sizing rules
+- [ ] Create API endpoints for size queries
+- [ ] Add user measurement storage
+- [ ] Implement size comparison feature
+
+### Documentation
+- [ ] Complete API documentation
+- [ ] Add code comments
+- [ ] Create user guide
+- [ ] Document data ingestion process
+- [ ] Add troubleshooting guide
+
+## Low Priority
+
+### UI/UX
+- [ ] Improve error messages
+- [ ] Add loading states
+- [ ] Implement responsive design
+- [ ] Add data visualization
+- [ ] Improve form validation
+
+### Testing
+- [ ] Add unit tests
+- [ ] Implement integration tests
+- [ ] Add performance tests
+- [ ] Create test data sets
+- [ ] Add CI/CD pipeline
+
+## Future Considerations
+- [ ] International size standardization
+- [ ] Machine learning for size predictions
+- [ ] Mobile app development
+- [ ] Integration with e-commerce platforms
+- [ ] Real-time size availability checking 
+]]>
+</file>
+<file name="a3-ingestion/instructions.md">
+<![CDATA[
+# A3 Application Instructions
+
+## Initial Setup
+
+1. **Prerequisites**
+   - Python 3.x installed
+   - Git (for cloning the repository)
+   - OpenAI API key
+
+2. **Environment Setup**
+   From the root directory (A3):
+   ```bash
+   # Activate the virtual environment
+   source a3-ingestion/.venv/bin/activate
+   
+   # Your terminal should now show (.venv) at the beginning of the prompt
+   # Example: (.venv) username@computer A3 %
+   ```
+
+3. **Install Dependencies**
+   ```bash
+   # Make sure you're in the virtual environment first
+   cd a3-ingestion
+   pip install -r requirements.txt
+   pip install streamlit  # Required but not in requirements.txt
+   ```
+
+4. **Configuration**
+   - Create or edit `config.env` in the a3-ingestion directory
+   - Add your OpenAI API key:
+     ```
+     OPENAI_API_KEY=your_api_key_here
+     ```
+
+## Running the Application
+
+1. **Start the Streamlit Interface**
+   ```bash
+   # Exact sequence from root directory:
+   cd a3-ingestion
+   source .venv/bin/activate
+   streamlit run streamlit_app.py
+   
+   # You should see: "You can now view your Streamlit app in your browser."
+   ```
+   - The application will automatically open in your default web browser
+   - If it doesn't, you can manually visit: http://localhost:8501
+
+2. **Using the Application**
+   - Upload size guide images (JPG, JPEG, or PNG)
+   - Fill in the metadata:
+     - Brand name
+     - Gender
+     - Size guide header
+     - Source URL
+     - Unit of measurement
+     - Size guide scope
+   - Click "Submit for Analysis" to process the image
+
+## Shutting Down
+
+1. **Stop the Streamlit Server**
+   - Press `Ctrl+C` in the terminal where Streamlit is running
+
+2. **Deactivate the Virtual Environment**
+   ```bash
+   deactivate
+   ```
+
+## Troubleshooting
+
+1. **Virtual Environment Issues**
+   If the virtual environment doesn't exist:
+   ```bash
+   cd a3-ingestion
+   python -m venv .venv
+   source .venv/bin/activate
+   ```
+
+2. **Missing Dependencies**
+   ```bash
+   pip install -r requirements.txt
+   pip install streamlit
+   ```
+
+3. **OpenAI API Issues**
+   - Verify your API key is correctly set in config.env
+   - Ensure you have sufficient API credits
+]]>
+</file>
+<file name="a3-ingestion/main.py">
+<![CDATA[
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+import uvicorn
+from dotenv import load_dotenv
+import os
+
+# Load environment variables
+load_dotenv()
+
+# Create FastAPI app
+app = FastAPI(title="A3 Ingestion Service")
+
+# Configure CORS
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # In production, replace with specific origins
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Health check endpoint
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
+# Add your API routes here
+# Example:
+# @app.post("/process-image")
+# async def process_image():
+#     return {"status": "processing"}
+
+if __name__ == "__main__":
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8000,
+        reload=True
+    ) 
+]]>
+</file>
+<file name="a3-ingestion/pytest.ini">
+<![CDATA[
+[pytest]
+testpaths = tests
+python_files = test_*.py
+python_classes = Test*
+python_functions = test_*
+
+# Add the project root to Python path
+addopts = --import-mode=importlib
+
+# Configure test discovery
+norecursedirs = .* build dist CVS _darcs {arch} *.egg venv env
+
+# Configure output
+console_output_style = progress
+log_cli = True
+log_cli_level = INFO
+
+# Configure warnings
+filterwarnings =
+    ignore::DeprecationWarning
+    ignore::UserWarning
+
+# Configure test coverage settings
+[coverage:run]
+branch = True
+source = app
+
+[coverage:report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    raise NotImplementedError
+    if __name__ == .__main__.:
+    pass 
+]]>
+</file>
+<file name="a3-ingestion/README.md">
+<![CDATA[
+# A3 Ingestion Service
+
+A service for ingesting and processing men's clothing size data, providing a unified size guide across brands.
+
+## Project Structure
+
+```
+a3-ingestion/
+├── app/                    # Main application code
+│   ├── api/               # API endpoints and routes
+│   ├── core/              # Core application logic
+│   ├── db/                # Database models and migrations
+│   ├── services/          # Business logic services
+│   └── utils/             # Utility functions
+├── data/                  # Data files
+│   ├── raw/              # Raw input data
+│   ├── processed/        # Processed data files
+│   └── backups/          # Database backups
+├── docs/                  # Documentation
+│   ├── api/              # API documentation
+│   └── architecture/     # Architecture documentation
+├── scripts/              # Utility scripts
+├── tests/                # Test files
+├── ui/                   # User interface components
+├── .env                  # Environment variables
+├── .env.example         # Example environment variables
+├── .gitignore           # Git ignore file
+├── config.py            # Configuration settings
+├── main.py              # Application entry point
+└── requirements.txt     # Python dependencies
+```
+
+## Setup
+
+1. Create a virtual environment:
+```bash
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+```
+
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Copy `.env.example` to `.env` and configure your environment variables:
+```bash
+cp .env.example .env
+```
+
+4. Initialize the database:
+```bash
+python scripts/init_db.py
+```
+
+## Development
+
+- Run the API server:
+```bash
+python main.py
+```
+
+- Run the UI:
+```bash
+streamlit run ui/streamlit_app.py
+```
+
+- Run tests:
+```bash
+pytest tests/
+```
+
+## Data Processing
+
+The service processes men's clothing size data from various brands and creates a unified size guide. The data processing pipeline includes:
+
+1. Data ingestion from multiple sources
+2. Text chunking and embedding
+3. Vector database storage
+4. Size recommendation generation
+
+## API Documentation
+
+See [API Documentation](docs/api/README.md) for detailed API endpoints and usage.
+
+## Architecture
+
+See [Architecture Documentation](docs/architecture/README.md) for system design and components.
+
+## Contributing
+
+1. Create a new branch for your feature
+2. Make your changes
+3. Run tests
+4. Submit a pull request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details. 
+]]>
+</file>
+<file name="a3-ingestion/recovered_main.py">
+<![CDATA[
+I don't know about Python version '3.13' yet.
+Python versions 3.9 and greater are not supported.
+I don't know about Python version '3.13' yet.
+Python versions 3.9 and greater are not supported.
+I don't know about Python version '3.13' yet.
+Python versions 3.9 and greater are not supported.
+I don't know about Python version '3.13' yet.
+Python versions 3.9 and greater are not supported.
+I don't know about Python version '3.13' yet.
+Python versions 3.9 and greater are not supported.
+I don't know about Python version '3.13' yet.
+Python versions 3.9 and greater are not supported.
+
+]]>
+</file>
+<file name="a3-ingestion/requirements-test.txt">
+<![CDATA[
+pytest==8.0.0
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+pytest-asyncio==0.23.5
+pytest-xdist==3.5.0
+coverage==7.4.1
+hypothesis==6.98.0
+freezegun==1.4.0 
+]]>
+</file>
+<file name="a3-ingestion/requirements.txt">
+<![CDATA[
+annotated-types==0.7.0
+anyio==4.9.0
+certifi==2025.1.31
+distro==1.9.0
+h11==0.14.0
+httpcore==1.0.8
+httpx==0.28.1
+idna==3.10
+jiter==0.9.0
+numpy==2.2.4
+openai==1.73.0
+psycopg2-binary==2.9.10
+pydantic==2.11.3
+pydantic_core==2.33.1
+python-dotenv==1.1.0
+sniffio==1.3.1
+tqdm==4.67.1
+typing-inspection==0.4.0
+typing_extensions==4.13.2
+
+]]>
+</file>
+<file name="a3-ingestion/scripts/__init__.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/scripts/demo_vector_mapper.py">
+<![CDATA[
+#!/usr/bin/env python3
+
+from app.utils.vector_mapper import match_to_standard, get_measurement_categories
+
+def main():
+    # Example measurement names from various brands
+    test_measurements = [
+        "chest width",
+        "chest circumference",
+        "bust",
+        "waist size",
+        "waist circumference",
+        "hip measurement",
+        "hip circumference",
+        "inseam length",
+        "inside leg",
+        "leg length",
+        "collar size",
+        "neck measurement",
+        "sleeve",
+        "arm length",
+        "shoulder width",
+        # Some edge cases
+        "chest pocket width",
+        "waistband height",
+        "random text",
+    ]
+
+    print("Demonstrating measurement name standardization:")
+    print("-" * 50)
+    
+    for measurement in test_measurements:
+        standard = match_to_standard(measurement)
+        print(f"'{measurement}' -> {standard or 'No match'}")
+    
+    print("\nStandard measurement categories and variations:")
+    print("-" * 50)
+    
+    categories = get_measurement_categories()
+    for standard, variations in categories.items():
+        print(f"\n{standard.upper()}:")
+        for var in variations:
+            print(f"  - {var}")
+
+if __name__ == "__main__":
+    main() 
+]]>
+</file>
+<file name="a3-ingestion/scripts/embed_knowledge.py">
+<![CDATA[
+import os
+import json
+import faiss
+import openai
+import numpy as np
+from dotenv import load_dotenv
+from typing import List
+import tiktoken
+
+load_dotenv("config.env")
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+ENCODER = tiktoken.get_encoding("cl100k_base")
+
+# Step 1: Load and chunk the text
+def chunk_text(text: str, max_tokens=300) -> List[str]:
+    paragraphs = text.split("\n\n")
+    chunks = []
+    current = ""
+
+    for para in paragraphs:
+        if len(ENCODER.encode(current + para)) < max_tokens:
+            current += "\n\n" + para
+        else:
+            chunks.append(current.strip())
+            current = para
+
+    if current:
+        chunks.append(current.strip())
+    return chunks
+
+# Step 2: Embed using OpenAI
+def embed_chunks(chunks: List[str]) -> List[List[float]]:
+    response = openai.embeddings.create(
+        model="text-embedding-3-small",
+        input=chunks
+    )
+    return [r.embedding for r in response.data]
+
+# Step 3: Main logic
+if __name__ == "__main__":
+    path = "knowledge/menswear_research_deepresearch.txt"
+    with open(path, "r") as f:
+        text = f.read()
+
+    chunks = chunk_text(text)
+    vectors = embed_chunks(chunks)
+
+    index = faiss.IndexFlatL2(len(vectors[0]))
+    index.add(np.array(vectors).astype("float32"))
+
+    # Save index and chunks for lookup
+    faiss.write_index(index, "a3_knowledge.index")
+    with open("faiss_chunks.json", "w") as f:
+        json.dump(chunks, f, indent=2)
+
+    print(f"✅ Embedded and saved {len(chunks)} chunks to FAISS.")
+
+]]>
+</file>
+<file name="a3-ingestion/scripts/retrieve_knowledge.py">
+<![CDATA[
+import os
+import faiss
+import numpy as np
+import json
+import openai
+from dotenv import load_dotenv
+import tiktoken
+
+
+load_dotenv("config.env")
+openai.api_key = os.getenv("OPENAI_API_KEY")
+ENCODER = tiktoken.get_encoding("cl100k_base")
+
+# Embed the user query using OpenAI
+def embed_query(query):
+    response = openai.embeddings.create(
+        model="text-embedding-3-small",
+        input=[query]
+    )
+    return np.array(response.data[0].embedding).astype("float32")
+
+# Load FAISS index and chunks
+def load_index_and_chunks():
+    index = faiss.read_index("a3_knowledge.index")
+    with open("faiss_chunks.json", "r") as f:
+        chunks = json.load(f)
+    return index, chunks
+
+# Perform similarity search
+def retrieve_relevant_chunks(query, top_k=5):
+    index, chunks = load_index_and_chunks()
+    embedded_query = embed_query(query).reshape(1, -1)
+    distances, indices = index.search(embedded_query, top_k)
+    return [chunks[i] for i in indices[0]]
+
+# Run it standalone
+if __name__ == "__main__":
+    user_query = input("🔍 Enter your question for A3: ")
+    results = retrieve_relevant_chunks(user_query)
+
+    print("\n🧠 Most Relevant Research Chunks:\n")
+    for i, chunk in enumerate(results, 1):
+        print(f"[{i}] {chunk}\n")
+
+]]>
+</file>
+<file name="a3-ingestion/scripts/run_migration.py">
+<![CDATA[
+import os
+import psycopg2
+from dotenv import load_dotenv
+import sys
+
+def run_migration(migration_file, direction='up'):
+    """Run the SQL migration in the specified direction."""
+    load_dotenv()
+
+    # Get database connection details from environment variables
+    db_url = os.getenv('DATABASE_URL')
+    
+    if not db_url:
+        raise ValueError("DATABASE_URL environment variable not set")
+
+    # Connect to the database
+    conn = psycopg2.connect(db_url)
+    conn.autocommit = False  # We want transaction control
+    
+    try:
+        # Read the migration file
+        migration_path = os.path.join(
+            os.path.dirname(os.path.dirname(__file__)),
+            'data',
+            'migrations',
+            migration_file
+        )
+        
+        with open(migration_path, 'r') as f:
+            sql_content = f.read()
+
+        # Split the content into up and down migrations
+        up_migration = sql_content.split('-- Down Migration')[0]
+        down_migration = sql_content.split('-- Down Migration')[1]
+
+        # Execute the appropriate migration
+        with conn.cursor() as cur:
+            if direction == 'up':
+                print(f"Running UP migration for {migration_file}...")
+                cur.execute(up_migration)
+            else:
+                print(f"Running DOWN migration for {migration_file}...")
+                cur.execute(down_migration)
+
+        # Commit the transaction
+        conn.commit()
+        print(f"Migration {direction} completed successfully!")
+
+    except Exception as e:
+        # Roll back the transaction on error
+        conn.rollback()
+        print(f"Error during migration: {str(e)}")
+        raise
+
+    finally:
+        conn.close()
+
+if __name__ == "__main__":
+    if len(sys.argv) < 2:
+        print("Usage: python run_migration.py <migration_file> [direction]")
+        sys.exit(1)
+        
+    migration_file = sys.argv[1]
+    direction = sys.argv[2] if len(sys.argv) > 2 else 'up'
+    run_migration(migration_file, direction) 
+]]>
+</file>
+<file name="a3-ingestion/setup.py">
+<![CDATA[
+from setuptools import setup, find_packages
+
+setup(
+    name="a3-ingestion",
+    version="0.1",
+    packages=find_packages(),
+    install_requires=[
+        "streamlit",
+        "openai",
+        "numpy",
+        "python-dotenv",
+    ],
+) 
+]]>
+</file>
+<file name="a3-ingestion/tests/__init__.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/tests/test_vector_mapper.py">
+<![CDATA[
+import pytest
+from hypothesis import given, strategies as st
+from typing import List, Dict, Any
+from app.utils.vector_mapper import VectorMapper
+
+@pytest.fixture
+def vector_mapper():
+    # Initialize with some test data
+    test_data = {
+        "chest": ["chest", "bust", "chest circumference"],
+        "waist": ["waist", "midsection", "waist circumference"],
+        "inseam": ["inseam", "inside leg", "leg length"],
+        "shoulder": ["shoulder", "shoulder width", "across shoulder"]
+    }
+    return VectorMapper(measurement_mappings=test_data)
+
+class TestVectorMapper:
+    def test_exact_match(self, vector_mapper):
+        """Test exact matches for measurement terms."""
+        assert vector_mapper.map_measurement("chest") == "chest"
+        assert vector_mapper.map_measurement("waist") == "waist"
+        assert vector_mapper.map_measurement("inseam") == "inseam"
+
+    def test_common_variations(self, vector_mapper):
+        """Test common variations of measurement terms."""
+        assert vector_mapper.map_measurement("bust") == "chest"
+        assert vector_mapper.map_measurement("chest circumference") == "chest"
+        assert vector_mapper.map_measurement("inside leg") == "inseam"
+
+    def test_case_insensitivity(self, vector_mapper):
+        """Test case-insensitive matching."""
+        assert vector_mapper.map_measurement("CHEST") == "chest"
+        assert vector_mapper.map_measurement("Waist") == "waist"
+        assert vector_mapper.map_measurement("InSeam") == "inseam"
+
+    def test_whitespace_handling(self, vector_mapper):
+        """Test handling of extra whitespace."""
+        assert vector_mapper.map_measurement("  chest  ") == "chest"
+        assert vector_mapper.map_measurement("waist\t") == "waist"
+        assert vector_mapper.map_measurement(" chest circumference ") == "chest"
+
+    def test_semantic_matching(self, vector_mapper):
+        """Test semantic matching with similarity threshold."""
+        # These should match with high similarity
+        assert vector_mapper.map_measurement("chest measurement") == "chest"
+        assert vector_mapper.map_measurement("waistline") == "waist"
+
+    def test_non_matching(self, vector_mapper):
+        """Test behavior with non-matching terms."""
+        assert vector_mapper.map_measurement("xyz123") is None
+        assert vector_mapper.map_measurement("") is None
+        assert vector_mapper.map_measurement("   ") is None
+
+    def test_threshold_behavior(self, vector_mapper):
+        """Test behavior with different similarity thresholds."""
+        # Test with custom threshold
+        result = vector_mapper.map_measurement(
+            "chest area", similarity_threshold=0.7
+        )
+        assert result == "chest"
+
+        # Test with stricter threshold
+        result = vector_mapper.map_measurement(
+            "chest area", similarity_threshold=0.95
+        )
+        assert result is None
+
+    def test_get_measurement_categories(self, vector_mapper):
+        """Test retrieval of measurement categories."""
+        categories = vector_mapper.get_measurement_categories()
+        assert isinstance(categories, list)
+        assert "chest" in categories
+        assert "waist" in categories
+        assert "inseam" in categories
+        assert "shoulder" in categories
+
+    @given(st.text(min_size=1, max_size=50))
+    def test_property_based_input(self, vector_mapper, input_text):
+        """Property-based test for input handling."""
+        try:
+            result = vector_mapper.map_measurement(input_text)
+            assert isinstance(result, str) or result is None
+        except Exception as e:
+            pytest.fail(f"Failed with input {input_text}: {str(e)}")
+
+    def test_batch_mapping(self, vector_mapper):
+        """Test batch mapping of multiple measurements."""
+        inputs = ["chest", "waistline", "leg length", "invalid"]
+        expected = ["chest", "waist", "inseam", None]
+        results = vector_mapper.batch_map_measurements(inputs)
+        assert results == expected
+
+    def test_data_structure_integrity(self, vector_mapper):
+        """Test the integrity of internal data structures."""
+        # Test that internal mappings are properly maintained
+        internal_mappings = vector_mapper.get_measurement_mappings()
+        assert isinstance(internal_mappings, dict)
+        assert all(isinstance(k, str) for k in internal_mappings.keys())
+        assert all(isinstance(v, list) for v in internal_mappings.values())
+
+    def test_update_mappings(self, vector_mapper):
+        """Test updating measurement mappings."""
+        new_mappings = {"neck": ["neck", "neck circumference"]}
+        vector_mapper.update_mappings(new_mappings)
+        assert vector_mapper.map_measurement("neck") == "neck"
+        assert vector_mapper.map_measurement("neck circumference") == "neck"
+
+    @pytest.mark.asyncio
+    async def test_async_batch_mapping(self, vector_mapper):
+        """Test asynchronous batch mapping functionality."""
+        inputs = ["chest", "waist", "invalid"]
+        results = await vector_mapper.async_batch_map_measurements(inputs)
+        assert results == ["chest", "waist", None]
+
+    def test_error_handling(self, vector_mapper):
+        """Test error handling for invalid inputs."""
+        with pytest.raises(ValueError):
+            vector_mapper.map_measurement(None)
+        
+        with pytest.raises(TypeError):
+            vector_mapper.map_measurement(123)
+
+        with pytest.raises(ValueError):
+            vector_mapper.update_mappings(None)
+
+    @pytest.mark.parametrize("input_term,expected", [
+        ("chest", "chest"),
+        ("bust", "chest"),
+        ("waistline", "waist"),
+        ("leg length", "inseam"),
+        ("invalid_term", None),
+    ])
+    def test_parametrized_mapping(self, vector_mapper, input_term, expected):
+        """Parametrized test for various input terms."""
+        assert vector_mapper.map_measurement(input_term) == expected 
+]]>
+</file>
+<file name="a3-ingestion/tests/utils/test_vector_mapper.py">
+<![CDATA[
+import pytest
+from app.utils.vector_mapper import (
+    match_to_standard,
+    get_measurement_categories,
+    MEASUREMENT_CATEGORIES
+)
+
+def test_exact_matches():
+    """Test exact matches for standard measurement names."""
+    assert match_to_standard("chest") == "chest"
+    assert match_to_standard("waist") == "waist"
+    assert match_to_standard("hip") == "hip"
+    assert match_to_standard("inseam") == "inseam"
+
+def test_common_variations():
+    """Test common variations of measurement names."""
+    variations = [
+        ("chest width", "chest"),
+        ("bust measurement", "chest"),
+        ("natural waist", "waist"),
+        ("waist circumference", "waist"),
+        ("hip size", "hip"),
+        ("seat measurement", "hip"),
+        ("inside leg", "inseam"),
+    ]
+    
+    for input_name, expected in variations:
+        assert match_to_standard(input_name) == expected
+
+def test_case_insensitivity():
+    """Test that matching is case insensitive."""
+    variations = [
+        ("CHEST WIDTH", "chest"),
+        ("Waist Circumference", "waist"),
+        ("Hip Size", "hip"),
+        ("INSEAM LENGTH", "inseam"),
+    ]
+    
+    for input_name, expected in variations:
+        assert match_to_standard(input_name) == expected
+
+def test_whitespace_handling():
+    """Test handling of extra whitespace."""
+    variations = [
+        ("  chest width  ", "chest"),
+        ("waist  size", "waist"),
+        ("hip   measurement  ", "hip"),
+        (" inseam ", "inseam"),
+    ]
+    
+    for input_name, expected in variations:
+        assert match_to_standard(input_name) == expected
+
+def test_semantic_matching():
+    """Test semantic matching for similar but non-exact terms."""
+    variations = [
+        ("torso width", "chest"),
+        ("midsection", "waist"),
+        ("thigh circumference", None),  # Should not match any category
+        ("arm span", "sleeve"),
+    ]
+    
+    for input_name, expected in variations:
+        assert match_to_standard(input_name) == expected
+
+def test_threshold_filtering():
+    """Test that matches below threshold are rejected."""
+    non_matches = [
+        "random text",
+        "not a measurement",
+        "something else",
+        "12345",
+    ]
+    
+    for input_name in non_matches:
+        assert match_to_standard(input_name, threshold=0.75) is None
+
+def test_get_measurement_categories():
+    """Test retrieval of measurement categories."""
+    categories = get_measurement_categories()
+    
+    # Check that all standard categories are present
+    assert set(categories.keys()) == set(MEASUREMENT_CATEGORIES.keys())
+    
+    # Check that variations are returned as lists
+    for variations in categories.values():
+        assert isinstance(variations, list)
+        assert len(variations) > 0
+
+def test_threshold_sensitivity():
+    """Test different threshold values."""
+    measurement = "torso width"
+    
+    # Should match with lower threshold
+    assert match_to_standard(measurement, threshold=0.7) == "chest"
+    
+    # Should not match with very high threshold
+    assert match_to_standard(measurement, threshold=0.99) is None
+
+def test_measurement_category_consistency():
+    """Test that all measurement categories are properly structured."""
+    for category, variations in MEASUREMENT_CATEGORIES.items():
+        # Category should be a string
+        assert isinstance(category, str)
+        
+        # Variations should be a set
+        assert isinstance(variations, set)
+        
+        # Each variation should be a string
+        for variation in variations:
+            assert isinstance(variation, str)
+            
+        # Category should be included in its own variations
+        assert category in variations 
+]]>
+</file>
+<file name="a3-ingestion/ui/__init__.py">
+<![CDATA[
+
+]]>
+</file>
+<file name="a3-ingestion/ui/streamlit_app.py">
+<![CDATA[
+import streamlit as st
+import base64
+import json
+import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.core.vision import run_vision_prompt
+from app.utils.vector_mapper import match_to_standard
+
+st.set_page_config(page_title="A3 Ingestor", layout="wide")
+st.title("🧠 A3 - Clothing Size Guide Ingestor")
+
+# --- Metadata Inputs ---
+st.subheader("📄 Provide Metadata (optional but recommended)")
+brand = st.text_input("Brand (e.g., Banana Republic)")
+gender = st.selectbox("Gender", options=["", "Men", "Women", "Unisex"])
+size_guide_header = st.text_input("Size Guide Header (e.g., Shirts & Sweaters, Apparel)")
+source_url = st.text_input("Source URL (where the screenshot was taken)")
+unit = st.radio("Unit of Measurement", options=["", "inches", "centimeters"], horizontal=True)
+scope = st.selectbox(
+    "📐 Size Guide Scope",
+    options=["", "This specific item only", "A category (e.g., Tops, Outerwear)", "All clothing for this gender"]
+)
+
+# --- File Uploader ---
+st.subheader("📤 Upload a size guide image")
+uploaded_file = st.file_uploader("Upload JPG, JPEG, or PNG", type=["jpg", "jpeg", "png"])
+
+if uploaded_file:
+    st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
+    image_path = f"uploads/{uploaded_file.name}"
+
+    with open(image_path, "wb") as f:
+        f.write(uploaded_file.getbuffer())
+
+    if st.button("🚀 Submit for Analysis"):
+        if not brand or not gender or not unit or not scope:
+            st.warning("⚠️ Metadata incomplete. Please fill in all required fields.")
+            st.stop()
+
+        with st.spinner("Running GPT-4 Vision..."):
+            gpt_output = run_vision_prompt(image_path)
+
+        try:
+            json_start = gpt_output.index("{")
+            json_end = gpt_output.rindex("}") + 1
+            json_str = gpt_output[json_start:json_end]
+            parsed = json.loads(json_str)
+            st.success("✅ GPT extracted size guide successfully.")
+        except (json.JSONDecodeError, ValueError):
+            st.error("❌ GPT output was not valid JSON. Please review the raw output:")
+            st.text(gpt_output)
+            st.stop()
+
+        # Show extracted size chart
+        st.subheader("📏 Extracted Size Chart")
+        st.json(parsed)
+
+        # Show collected metadata
+        st.subheader("🧾 Metadata Summary")
+        st.write({
+            "Brand": brand,
+            "Gender": gender,
+            "Size Guide Header": size_guide_header,
+            "Source URL": source_url,
+            "Unit": unit,
+            "Scope": scope
+        })
+
+        st.success("✅ No follow-up questions. Ready to convert to SQL.")
+
+]]>
+</file>
+</files>

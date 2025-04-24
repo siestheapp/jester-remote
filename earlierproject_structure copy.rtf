@@ -1,0 +1,80 @@
+{\rtf1\ansi\ansicpg1252\cocoartf2822
+\cocoatextscaling0\cocoaplatform0{\fonttbl\f0\fswiss\fcharset0 Helvetica;}
+{\colortbl;\red255\green255\blue255;}
+{\*\expandedcolortbl;;}
+\margl1440\margr1440\vieww11520\viewh8400\viewkind0
+\pard\tx720\tx1440\tx2160\tx2880\tx3600\tx4320\tx5040\tx5760\tx6480\tx7200\tx7920\tx8640\pardirnatural\partightenfactor0
+
+\f0\fs24 \cf0 a3-ingestion/                      # Root project directory\
+\uc0\u9500 \u9472 \u9472  app/                          # Main application code\
+\uc0\u9474    \u9500 \u9472 \u9472  api/                     # API endpoints and routing\
+\uc0\u9474    \u9474    \u9500 \u9472 \u9472  __init__.py         # API package initialization\
+\uc0\u9474    \u9474    \u9500 \u9472 \u9472  chat_app.py         # Chat functionality endpoints\
+\uc0\u9474    \u9474    \u9492 \u9472 \u9472  routes.py           # Main API route definitions\
+\uc0\u9474    \u9500 \u9472 \u9472  core/                   # Core business logic\
+\uc0\u9474    \u9474    \u9500 \u9472 \u9472  a3_chat_vector.py   # Vector-based chat functionality\
+\uc0\u9474    \u9474    \u9492 \u9472 \u9472  vision.py           # Image processing functionality\
+\uc0\u9474    \u9500 \u9472 \u9472  db/                     # Database related code\
+\uc0\u9474    \u9474    \u9500 \u9472 \u9472  migrations.py       # Database migration handling\
+\uc0\u9474    \u9474    \u9492 \u9472 \u9472  models.py          # Database models/schemas\
+\uc0\u9474    \u9500 \u9472 \u9472  models/                 # Pydantic data models\
+\uc0\u9474    \u9500 \u9472 \u9472  schemas/                # API request/response schemas\
+\uc0\u9474    \u9500 \u9472 \u9472  services/              # Business logic services\
+\uc0\u9474    \u9474    \u9500 \u9472 \u9472  ingestion_service.py # Data ingestion logic\
+\uc0\u9474    \u9474    \u9492 \u9472 \u9472  size_service.py    # Size calculation service\
+\uc0\u9474    \u9492 \u9472 \u9472  utils/                 # Utility functions\
+\uc0\u9474        \u9492 \u9472 \u9472  vector_mapper.py   # Vector mapping utilities\
+\
+\uc0\u9500 \u9472 \u9472  build/                      # Build and dependency files\
+\uc0\u9474    \u9500 \u9472 \u9472  pyproject.toml         # Project metadata and config\
+\uc0\u9474    \u9500 \u9472 \u9472  requirements.txt       # Production dependencies\
+\uc0\u9474    \u9500 \u9472 \u9472  requirements-test.txt  # Test dependencies\
+\uc0\u9474    \u9492 \u9472 \u9472  setup.py              # Package installation setup\
+\
+\uc0\u9500 \u9472 \u9472  config/                     # Configuration files\
+\uc0\u9474    \u9500 \u9472 \u9472  .env/                 # Environment configurations\
+\uc0\u9474    \u9474    \u9500 \u9472 \u9472  .env             # Active environment variables\
+\uc0\u9474    \u9474    \u9500 \u9472 \u9472  .env.example     # Template for environment vars\
+\uc0\u9474    \u9474    \u9492 \u9472 \u9472  .env.local.example # Local dev environment template\
+\uc0\u9474    \u9500 \u9472 \u9472  app_config.py        # Application configuration\
+\uc0\u9474    \u9500 \u9472 \u9472  logging.ini          # Logging configuration\
+\uc0\u9474    \u9492 \u9472 \u9472  pytest.ini           # PyTest configuration\
+\
+\uc0\u9500 \u9472 \u9472  data/                       # Data storage\
+\uc0\u9474    \u9500 \u9472 \u9472  backups/              # Database backups\
+\uc0\u9474    \u9500 \u9472 \u9472  migrations/           # SQL migration files\
+\uc0\u9474    \u9500 \u9472 \u9472  processed/            # Processed data files\
+\uc0\u9474    \u9492 \u9472 \u9472  raw/                  # Raw input data\
+\
+\uc0\u9500 \u9472 \u9472  docs/                       # Documentation\
+\uc0\u9474    \u9500 \u9472 \u9472  api/                  # API documentation\
+\uc0\u9474    \u9500 \u9472 \u9472  architecture/         # System architecture docs\
+\uc0\u9474    \u9500 \u9472 \u9472  database/            # Database documentation\
+\uc0\u9474    \u9500 \u9472 \u9472  development/         # Development guides\
+\uc0\u9474    \u9500 \u9472 \u9472  knowledge/           # Knowledge base\
+\uc0\u9474    \u9500 \u9472 \u9472  project/             # Project management docs\
+\uc0\u9474    \u9500 \u9472 \u9472  setup/               # Setup guides\
+\uc0\u9474    \u9492 \u9472 \u9472  LICENSE              # Project license\
+\
+\uc0\u9500 \u9472 \u9472  logs/                       # Application logs\
+\
+\uc0\u9500 \u9472 \u9472  scripts/                    # Utility scripts\
+\uc0\u9474    \u9500 \u9472 \u9472  demo_vector_mapper.py  # Vector mapping demo\
+\uc0\u9474    \u9500 \u9472 \u9472  embed_knowledge.py     # Knowledge embedding\
+\uc0\u9474    \u9500 \u9472 \u9472  retrieve_knowledge.py  # Knowledge retrieval\
+\uc0\u9474    \u9492 \u9472 \u9472  run_migration.py      # Database migration runner\
+\
+\uc0\u9500 \u9472 \u9472  tests/                      # Test files\
+\uc0\u9474    \u9500 \u9472 \u9472  fixtures/             # Test fixtures\
+\uc0\u9474    \u9500 \u9472 \u9472  integration/          # Integration tests\
+\uc0\u9474    \u9500 \u9472 \u9472  unit/                # Unit tests\
+\uc0\u9474    \u9492 \u9472 \u9472  utils/               # Test utilities\
+\
+\uc0\u9500 \u9472 \u9472  ui/                         # Frontend code\
+\uc0\u9474    \u9492 \u9472 \u9472  streamlit_app.py      # Streamlit web interface\
+\
+\uc0\u9500 \u9472 \u9472  uploads/                    # File upload directory\
+\
+\uc0\u9500 \u9472 \u9472  main.py                     # Application entry point\
+\uc0\u9500 \u9472 \u9472  Makefile                    # Build automation\
+\uc0\u9492 \u9472 \u9472  README.md                   # Project overview}
