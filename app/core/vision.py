@@ -59,12 +59,13 @@ def run_vision_prompt(image_path):
     return response.choices[0].message.content
 
 
-def process_size_guide_image(image_path: str) -> dict:
+def process_size_guide_image(image_path: str, metadata: dict = None) -> dict:
     """
     Process a size guide image and return structured data.
     
     Args:
         image_path: Path to the size guide image
+        metadata: Optional metadata about the size guide
         
     Returns:
         dict: Structured data containing the size guide information
@@ -85,7 +86,8 @@ def process_size_guide_image(image_path: str) -> dict:
             size_data['metadata'] = {
                 'source_image': os.path.basename(image_path),
                 'processed_timestamp': str(datetime.datetime.now()),
-                'raw_vision_output': vision_output
+                'raw_vision_output': vision_output,
+                **(metadata or {})  # Include provided metadata if available
             }
             
             return size_data
@@ -99,7 +101,8 @@ def process_size_guide_image(image_path: str) -> dict:
             'raw_vision_output': vision_output,
             'metadata': {
                 'source_image': os.path.basename(image_path),
-                'processed_timestamp': str(datetime.datetime.now())
+                'processed_timestamp': str(datetime.datetime.now()),
+                **(metadata or {})  # Include provided metadata if available
             }
         }
 
