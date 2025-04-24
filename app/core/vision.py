@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 from ..utils.vector_mapper import match_to_standard
 
 # Load the .env file
-env_loaded = load_dotenv("config.env")
+env_loaded = load_dotenv()
 print(f"✅ .env loaded? {'Yes' if env_loaded else 'No'}")
 
 # Retrieve the API key from the environment
