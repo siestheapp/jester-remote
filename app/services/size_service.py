@@ -149,9 +149,15 @@ class SizeService:
             ).first()
             
             if rules:
-                if measurement.min_value and measurement.min_value < rules.min_allowed:
+                # Convert values to float for comparison
+                min_value = float(measurement.min_value) if measurement.min_value is not None else None
+                max_value = float(measurement.max_value) if measurement.max_value is not None else None
+                min_allowed = float(rules.min_allowed) if rules.min_allowed is not None else None
+                max_allowed = float(rules.max_allowed) if rules.max_allowed is not None else None
+                
+                if min_value is not None and min_allowed is not None and min_value < min_allowed:
                     errors.append(f"{measurement.measurement_type.name} below minimum allowed value")
-                if measurement.max_value and measurement.max_value > rules.max_allowed:
+                if max_value is not None and max_allowed is not None and max_value > max_allowed:
                     errors.append(f"{measurement.measurement_type.name} above maximum allowed value")
         
         return errors

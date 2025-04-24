@@ -3,7 +3,18 @@ import os
 from dotenv import load_dotenv
 from app.core.jester_chat import JesterChat
 from app.core.vision import process_size_guide_image
+from app.services.size_service import SizeService
+from app.db.database import AsyncSessionLocal, init_db
 import json
+import asyncio
+import nest_asyncio
+import warnings
+
+# Suppress specific warnings
+warnings.filterwarnings("ignore", category=RuntimeWarning, module="torch")
+
+# Apply nest_asyncio to allow nested event loops
+nest_asyncio.apply()
 
 # Load environment variables
 load_dotenv()
@@ -17,6 +28,8 @@ if "messages" not in st.session_state:
     st.session_state.messages = []
 if "jester" not in st.session_state:
     st.session_state.jester = JesterChat()
+if "db_initialized" not in st.session_state:
+    st.session_state.db_initialized = False
 
 # Create two columns for the layout
 col1, col2 = st.columns([1, 2])
@@ -58,27 +71,56 @@ with col1:
                     # Process the image
                     result = process_size_guide_image(file_path)
                     
-                    # Add metadata to the result
-                    result['metadata'].update({
+                    # Prepare metadata
+                    metadata = {
                         'brand': brand,
                         'gender': gender,
                         'size_guide_header': size_guide_header,
                         'source_url': source_url,
                         'unit': unit,
                         'scope': scope
-                    })
+                    }
                     
-                    # Add the processed data to the knowledge base
-                    st.session_state.jester.add_to_knowledge_base(
-                        json.dumps(result, indent=2),
-                        metadata=result['metadata']
-                    )
+                    # Add metadata to the result
+                    result['metadata'].update(metadata)
                     
-                    st.success("✅ Size guide processed and added to knowledge base!")
+                    # Initialize database if needed
+                    if not st.session_state.db_initialized:
+                        try:
+                            asyncio.run(init_db())
+                            st.session_state.db_initialized = True
+                        except Exception as e:
+                            st.error(f"Database initialization error: {str(e)}")
+                            st.warning("The app will continue, but database features may be limited.")
                     
-                    # Display the extracted data
-                    st.subheader("📊 Extracted Size Chart")
-                    st.json(result)
+                    # Store in database
+                    async def store_in_db():
+                        async with AsyncSessionLocal() as session:
+                            size_service = SizeService(session)
+                            db_result = await size_service.process_size_guide(file_path, metadata)
+                            return db_result
+                    
+                    # Run the async function
+                    try:
+                        db_result = asyncio.run(store_in_db())
+                        
+                        if db_result['success']:
+                            # Add the processed data to the knowledge base
+                            st.session_state.jester.add_to_knowledge_base(
+                                json.dumps(result, indent=2),
+                                metadata=result['metadata']
+                            )
+                            
+                            st.success(f"✅ Size guide processed and stored in database! (ID: {db_result['size_guide_id']})")
+                            
+                            # Display the extracted data
+                            st.subheader("📊 Extracted Size Chart")
+                            st.json(result)
+                        else:
+                            st.error(f"❌ Error storing in database: {db_result['error']}")
+                    except Exception as e:
+                        st.error(f"❌ Error storing in database: {str(e)}")
+                        st.warning("The app will continue, but database features may be limited.")
 
 # Right column for chat interface
 with col2:
