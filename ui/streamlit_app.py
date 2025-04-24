@@ -1,73 +1,107 @@
 import streamlit as st
-import base64
-import json
 import os
-import sys
-import pandas as pd
-from app.core.vision import run_vision_prompt
-from app.utils.vector_mapper import match_to_standard
-from app.services.ingestion_service import IngestService
-from app.services.size_service import SizeService
-from app.utils.vector_mapper import VectorMapper
+from dotenv import load_dotenv
+from app.core.jester_chat import JesterChat
+from app.core.vision import process_size_guide_image
+import json
 
-st.set_page_config(page_title="Jester Ingestor", layout="wide")
-st.title("🧠 Jester - Clothing Size Guide Ingestor")
+# Load environment variables
+load_dotenv()
 
-# --- Metadata Inputs ---
-st.subheader("📄 Provide Metadata (optional but recommended)")
-brand = st.text_input("Brand (e.g., Banana Republic)")
-gender = st.selectbox("Gender", options=["", "Men", "Women", "Unisex"])
-size_guide_header = st.text_input("Size Guide Header (e.g., Shirts & Sweaters, Apparel)")
-source_url = st.text_input("Source URL (where the screenshot was taken)")
-unit = st.radio("Unit of Measurement", options=["", "inches", "centimeters"], horizontal=True)
-scope = st.selectbox(
-    "📐 Size Guide Scope",
-    options=["", "This specific item only", "A category (e.g., Tops, Outerwear)", "All clothing for this gender"]
-)
+# Initialize the chat interface
+st.set_page_config(page_title="Jester - Size Guide Analysis", layout="wide")
+st.title("🧠 Jester - Size Guide Analysis Assistant")
 
-# --- File Uploader ---
-st.subheader("📤 Upload a size guide image")
-uploaded_file = st.file_uploader("Upload JPG, JPEG, or PNG", type=["jpg", "jpeg", "png"])
+# Initialize session state
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "jester" not in st.session_state:
+    st.session_state.jester = JesterChat()
 
-if uploaded_file:
-    st.image(uploaded_file, caption="Uploaded Image", use_container_width=True)
-    image_path = f"uploads/{uploaded_file.name}"
+# Create two columns for the layout
+col1, col2 = st.columns([1, 2])
 
-    with open(image_path, "wb") as f:
-        f.write(uploaded_file.getbuffer())
+# Left column for metadata and upload
+with col1:
+    st.header("📄 Size Guide Information")
+    
+    # Metadata inputs
+    brand = st.text_input("Brand (e.g., Banana Republic)")
+    gender = st.selectbox("Gender", options=["", "Men", "Women", "Unisex"])
+    size_guide_header = st.text_input("Size Guide Header (e.g., Shirts & Sweaters)")
+    source_url = st.text_input("Source URL (where the size guide was found)")
+    unit = st.radio("Unit of Measurement", options=["", "inches", "centimeters"], horizontal=True)
+    scope = st.selectbox(
+        "Size Guide Scope",
+        options=["", "This specific item only", "A category (e.g., Tops, Outerwear)", "All clothing for this gender"]
+    )
+    
+    # File upload section
+    st.header("📁 Upload Size Guide")
+    uploaded_file = st.file_uploader("Upload a size guide image", type=["jpg", "jpeg", "png"])
+    
+    if uploaded_file:
+        # Display the uploaded image
+        st.image(uploaded_file, caption="Uploaded Size Guide", use_container_width=True)
+        
+        if st.button("🚀 Process Size Guide"):
+            if not brand or not gender or not unit or not scope:
+                st.warning("⚠️ Please fill in all required metadata fields.")
+            else:
+                with st.spinner("Processing size guide..."):
+                    # Save the uploaded file
+                    file_path = os.path.join("uploads", uploaded_file.name)
+                    os.makedirs("uploads", exist_ok=True)
+                    with open(file_path, "wb") as f:
+                        f.write(uploaded_file.getbuffer())
+                    
+                    # Process the image
+                    result = process_size_guide_image(file_path)
+                    
+                    # Add metadata to the result
+                    result['metadata'].update({
+                        'brand': brand,
+                        'gender': gender,
+                        'size_guide_header': size_guide_header,
+                        'source_url': source_url,
+                        'unit': unit,
+                        'scope': scope
+                    })
+                    
+                    # Add the processed data to the knowledge base
+                    st.session_state.jester.add_to_knowledge_base(
+                        json.dumps(result, indent=2),
+                        metadata=result['metadata']
+                    )
+                    
+                    st.success("✅ Size guide processed and added to knowledge base!")
+                    
+                    # Display the extracted data
+                    st.subheader("📊 Extracted Size Chart")
+                    st.json(result)
 
-    if st.button("🚀 Submit for Analysis"):
-        if not brand or not gender or not unit or not scope:
-            st.warning("⚠️ Metadata incomplete. Please fill in all required fields.")
-            st.stop()
-
-        with st.spinner("Running GPT-4 Vision..."):
-            gpt_output = run_vision_prompt(image_path)
-
-        try:
-            json_start = gpt_output.index("{")
-            json_end = gpt_output.rindex("}") + 1
-            json_str = gpt_output[json_start:json_end]
-            parsed = json.loads(json_str)
-            st.success("✅ GPT extracted size guide successfully.")
-        except (json.JSONDecodeError, ValueError):
-            st.error("❌ GPT output was not valid JSON. Please review the raw output:")
-            st.text(gpt_output)
-            st.stop()
-
-        # Show extracted size chart
-        st.subheader("📏 Extracted Size Chart")
-        st.json(parsed)
-
-        # Show collected metadata
-        st.subheader("🧾 Metadata Summary")
-        st.write({
-            "Brand": brand,
-            "Gender": gender,
-            "Size Guide Header": size_guide_header,
-            "Source URL": source_url,
-            "Unit": unit,
-            "Scope": scope
-        })
-
-        st.success("✅ No follow-up questions. Ready to convert to SQL.")
+# Right column for chat interface
+with col2:
+    st.header("💬 Chat with Jester")
+    
+    # Display chat messages
+    for message in st.session_state.messages:
+        with st.chat_message(message["role"]):
+            st.write(message["content"])
+    
+    # Chat input
+    if prompt := st.chat_input("Ask about size guides, measurements, or standardization..."):
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        with st.chat_message("user"):
+            st.write(prompt)
+        
+        # Get response from Jester
+        with st.chat_message("assistant"):
+            with st.spinner("Thinking..."):
+                response = st.session_state.jester.get_response(
+                    prompt,
+                    chat_history=st.session_state.messages[:-1]  # Exclude the current message
+                )
+                st.write(response)
+                st.session_state.messages.append({"role": "assistant", "content": response})
