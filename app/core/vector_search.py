@@ -14,105 +14,62 @@ from dotenv import load_dotenv
 load_dotenv()
 
 class JesterVectorSearch:
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, index_path: str = "data/vector/faiss_index", 
+                 chunks_path: str = "data/vector/chunks.json",
+                 model_name: str = "all-MiniLM-L6-v2"):
+        """Initialize the vector search with specified paths and model.
+        
+        Args:
+            index_path: Path to store/load the FAISS index
+            chunks_path: Path to store/load the chunks metadata
+            model_name: Name of the sentence transformer model to use
+        """
         self.model = SentenceTransformer(model_name)
-        self.vector_dir = Path("data/vector")
-        self.vector_dir.mkdir(parents=True, exist_ok=True)
-        self.research_file = self.vector_dir / "research_embeddings.npz"
-        self.research_metadata_file = self.vector_dir / "research_metadata.json"
-        self.embeddings = None
-        self.metadata = []
-        self._load_existing_data()
+        self.index_path = Path(index_path)
+        self.chunks_path = Path(chunks_path)
+        
+        # Create parent directories if they don't exist
+        self.index_path.parent.mkdir(parents=True, exist_ok=True)
+        self.chunks_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        # Initialize or load index and chunks
+        self._load_or_create_index()
 
-    def _load_existing_data(self):
-        """Load existing embeddings and metadata if they exist."""
-        if self.research_file.exists() and self.research_metadata_file.exists():
-            # Load embeddings
-            data = np.load(str(self.research_file))
-            self.embeddings = data['embeddings']
-            
-            # Load metadata
-            with open(self.research_metadata_file, 'r') as f:
-                self.metadata = json.load(f)
-
-    def initialize_with_research(self, research_text: str):
-        """Initialize the vector search with research document text."""
-        # Split the text into chunks (paragraphs)
-        chunks = [chunk.strip() for chunk in research_text.split('\n\n') if chunk.strip()]
-        
-        # Create embeddings
-        self.embeddings = self.model.encode(chunks)
-        
-        # Create metadata
-        self.metadata = [{"text": chunk, "type": "research"} for chunk in chunks]
-        
-        # Save embeddings and metadata
-        np.savez(str(self.research_file), embeddings=self.embeddings)
-        with open(self.research_metadata_file, 'w') as f:
-            json.dump(self.metadata, f)
-        
-        print(f"Saved {len(chunks)} research chunks to vector store")
+    def _load_or_create_index(self):
+        """Load existing index and chunks or create new ones."""
+        if self.index_path.exists() and self.chunks_path.exists():
+            self.index = faiss.read_index(str(self.index_path))
+            with open(self.chunks_path, 'r') as f:
+                self.chunks = json.load(f)
+        else:
+            # Create a new index with dimensions matching the model
+            self.index = faiss.IndexFlatL2(self.model.get_sentence_embedding_dimension())
+            self.chunks = []
+            self._save_state()
 
     def search(self, query: str, k: int = 3) -> List[Dict[str, Any]]:
         """Search for similar content using the query."""
-        if self.embeddings is None or len(self.metadata) == 0:
+        if len(self.chunks) == 0:
             return []
         
         # Encode query
         query_embedding = self.model.encode([query])[0]
         
-        # Calculate similarities
-        similarities = np.dot(self.embeddings, query_embedding)
-        
-        # Get top k results
-        top_k_indices = np.argsort(similarities)[-k:][::-1]
-        
-        results = []
-        for idx in top_k_indices:
-            result = self.metadata[idx].copy()
-            result['similarity'] = float(similarities[idx])
-            results.append(result)
-        
-        return results
-
-    def initialize_with_research(self, research_file: str):
-        """
-        Initialize the knowledge base with research documents.
-        Chunks the document and adds it to the vector store.
-        """
-        with open(research_file, 'r') as f:
-            content = f.read()
-            
-        # Split into meaningful chunks (e.g., by sections or paragraphs)
-        chunks = self._chunk_text(content)
-        
-        # Add chunks to knowledge base
-        self.batch_add_chunks(
-            chunks,
-            [{"type": "research", "source": research_file} for _ in chunks]
+        # Search the index
+        distances, indices = self.index.search(
+            query_embedding.reshape(1, -1).astype('float32'), 
+            k
         )
         
-    def _chunk_text(self, text: str, chunk_size: int = 1000) -> List[str]:
-        """Split text into chunks while preserving context."""
-        # Split by double newlines to preserve paragraph structure
-        paragraphs = text.split('\n\n')
-        chunks = []
-        current_chunk = []
-        current_size = 0
+        # Get results
+        results = []
+        for idx, distance in zip(indices[0], distances[0]):
+            if idx < len(self.chunks):  # Ensure index is valid
+                chunk = self.chunks[idx].copy()
+                chunk['similarity'] = float(1.0 / (1.0 + distance))  # Convert distance to similarity
+                results.append(chunk)
         
-        for para in paragraphs:
-            para_size = len(para)
-            if current_size + para_size > chunk_size and current_chunk:
-                chunks.append('\n\n'.join(current_chunk))
-                current_chunk = []
-                current_size = 0
-            current_chunk.append(para)
-            current_size += para_size
-            
-        if current_chunk:
-            chunks.append('\n\n'.join(current_chunk))
-            
-        return chunks
+        return results
 
     def add_chunk(self, text: str, metadata: Optional[Dict[str, Any]] = None):
         """Add a single text chunk to the vector store."""
@@ -154,13 +111,45 @@ class JesterVectorSearch:
         
     def _save_state(self):
         """Save index and chunks to disk."""
-        # Create parent directories if they don't exist
-        self.index_path.parent.mkdir(parents=True, exist_ok=True)
-        self.chunks_path.parent.mkdir(parents=True, exist_ok=True)
-        
         # Save FAISS index
         faiss.write_index(self.index, str(self.index_path))
         
         # Save chunks
         with open(self.chunks_path, 'w') as f:
-            json.dump(self.chunks, f) 
+            json.dump(self.chunks, f)
+
+    def initialize_with_research(self, research_file: str):
+        """Initialize the knowledge base with research documents."""
+        with open(research_file, 'r') as f:
+            content = f.read()
+            
+        # Split into meaningful chunks
+        chunks = self._chunk_text(content)
+        
+        # Add chunks to knowledge base
+        self.batch_add_chunks(
+            chunks,
+            [{"type": "research", "source": research_file} for _ in chunks]
+        )
+        
+    def _chunk_text(self, text: str, chunk_size: int = 1000) -> List[str]:
+        """Split text into chunks while preserving context."""
+        # Split by double newlines to preserve paragraph structure
+        paragraphs = text.split('\n\n')
+        chunks = []
+        current_chunk = []
+        current_size = 0
+        
+        for para in paragraphs:
+            para_size = len(para)
+            if current_size + para_size > chunk_size and current_chunk:
+                chunks.append('\n\n'.join(current_chunk))
+                current_chunk = []
+                current_size = 0
+            current_chunk.append(para)
+            current_size += para_size
+            
+        if current_chunk:
+            chunks.append('\n\n'.join(current_chunk))
+            
+        return chunks 

@@ -18,132 +18,198 @@ nest_asyncio.apply()
 
 # Load environment variables
 load_dotenv()
+print("✅ .env loaded?", os.path.exists(".env"))
+print("✅ API KEY FOUND?", bool(os.getenv("OPENAI_API_KEY")))
 
-# Initialize the chat interface
-st.set_page_config(page_title="Jester - Size Guide Analysis", layout="wide")
-st.title("🧠 Jester - Size Guide Analysis Assistant")
+# Set page config
+st.set_page_config(
+    page_title="Jester - Size Guide Analysis Assistant",
+    page_icon="🧠",
+    layout="wide"
+)
 
-# Initialize session state
-if "messages" not in st.session_state:
-    st.session_state.messages = []
+# Initialize Jester in session state if not already present
 if "jester" not in st.session_state:
     st.session_state.jester = JesterChat()
-if "db_initialized" not in st.session_state:
-    st.session_state.db_initialized = False
 
-# Create two columns for the layout
-col1, col2 = st.columns([1, 2])
+if "current_step" not in st.session_state:
+    st.session_state.current_step = "metadata"
 
-# Left column for metadata and upload
-with col1:
-    st.header("📄 Size Guide Information")
+if "uploaded_image" not in st.session_state:
+    st.session_state.uploaded_image = None
+
+if "metadata" not in st.session_state:
+    st.session_state.metadata = None
+
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+
+# Title
+st.title("Jester - Size Guide Analysis Assistant")
+
+def process_metadata_submission():
+    """Handle metadata form submission and transition to chat."""
+    metadata = {
+        "brand": st.session_state.get("brand", ""),
+        "gender": st.session_state.get("gender", ""),
+        "header": st.session_state.get("header", ""),
+        "source_url": st.session_state.get("source_url", ""),
+        "unit": st.session_state.get("unit", ""),
+        "scope": st.session_state.get("scope", "")
+    }
     
-    # Metadata inputs
-    brand = st.text_input("Brand (e.g., Banana Republic)")
-    gender = st.selectbox("Gender", options=["", "Men", "Women", "Unisex"])
-    size_guide_header = st.text_input("Size Guide Header (e.g., Shirts & Sweaters)")
-    source_url = st.text_input("Source URL (where the size guide was found)")
-    unit = st.radio("Unit of Measurement", options=["", "inches", "centimeters"], horizontal=True)
-    scope = st.selectbox(
-        "Size Guide Scope",
-        options=["", "This specific item only", "A category (e.g., Tops, Outerwear)", "All clothing for this gender"]
-    )
+    # Store metadata and move to chat step
+    st.session_state.metadata = metadata
+    st.session_state.current_step = "chat"
     
-    # File upload section
-    st.header("📁 Upload Size Guide")
-    uploaded_file = st.file_uploader("Upload a size guide image", type=["jpg", "jpeg", "png"])
+    # Determine if any metadata was provided
+    has_metadata = any(value.strip() for value in metadata.values())
+    
+    if has_metadata:
+        # If metadata was provided, ask for confirmation
+        initial_message = f"""Hello! I've received the following size guide information:
+
+{metadata['brand'] and f"Brand: {metadata['brand']}" or ""}
+{metadata['gender'] and f"Gender: {metadata['gender']}" or ""}
+{metadata['header'] and f"Size Guide Header: {metadata['header']}" or ""}
+{metadata['source_url'] and f"Source URL: {metadata['source_url']}" or ""}
+{metadata['unit'] and f"Unit of Measurement: {metadata['unit']}" or ""}
+{metadata['scope'] and f"Size Guide Scope: {metadata['scope']}" or ""}
+
+Does this information look correct? Once you confirm, I'll analyze the size guide image and help structure the data appropriately."""
+    else:
+        # If no metadata was provided, start with image analysis
+        initial_message = """Hello! I'll help you analyze this size guide. Let me take a look at the image first, and then I'll ask you some questions about it."""
+    
+    st.session_state.messages = [
+        {"role": "assistant", "content": initial_message}
+    ]
+
+# Metadata Collection Step
+if st.session_state.current_step == "metadata":
+    st.header("📋 Size Guide Information (Optional)")
+    st.info("You can fill in these details now, or let me analyze the image first and I'll ask you questions about it.")
+    
+    # Create columns for form fields
+    col1, col2 = st.columns(2)
+    
+    with col1:
+        # Brand input
+        st.text_input("Brand (e.g., Banana Republic)", key="brand")
+        
+        # Gender selection
+        st.selectbox("Gender", 
+                    ["", "Men's", "Women's", "Unisex"],
+                    key="gender")
+        
+        # Size Guide Header
+        st.text_input("Size Guide Header (e.g., Shirts & Sweaters)", 
+                     key="header")
+    
+    with col2:
+        # Source URL
+        st.text_input("Source URL (where the size guide was found)", 
+                     key="source_url")
+        
+        # Unit of Measurement
+        st.radio("Unit of Measurement", 
+                ["", "inches", "centimeters"],
+                key="unit")
+        
+        # Size Guide Scope
+        st.selectbox("Size Guide Scope",
+                    [
+                        "",
+                        "This specific item only",
+                        "A category (e.g., Tops, Outerwear)",
+                        "All clothing for this gender",
+                        "All clothing (brand-wide)"
+                    ],
+                    help="How widely applicable is this size guide?",
+                    key="scope")
+    
+    st.header("📤 Upload Size Guide")
+    uploaded_file = st.file_uploader("Upload a size guide image", 
+                                   type=["jpg", "jpeg", "png"])
     
     if uploaded_file:
-        # Display the uploaded image
-        st.image(uploaded_file, caption="Uploaded Size Guide", use_container_width=True)
-        
-        if st.button("🚀 Process Size Guide"):
-            if not brand or not gender or not unit or not scope:
-                st.warning("⚠️ Please fill in all required metadata fields.")
-            else:
-                with st.spinner("Processing size guide..."):
-                    # Save the uploaded file
-                    file_path = os.path.join("uploads", uploaded_file.name)
-                    os.makedirs("uploads", exist_ok=True)
-                    with open(file_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-                    
-                    # Process the image
-                    result = process_size_guide_image(file_path)
-                    
-                    # Prepare metadata
-                    metadata = {
-                        'brand': brand,
-                        'gender': gender,
-                        'size_guide_header': size_guide_header,
-                        'source_url': source_url,
-                        'unit': unit,
-                        'scope': scope
-                    }
-                    
-                    # Add metadata to the result
-                    result['metadata'].update(metadata)
-                    
-                    # Initialize database if needed
-                    if not st.session_state.db_initialized:
-                        try:
-                            asyncio.run(init_db())
-                            st.session_state.db_initialized = True
-                        except Exception as e:
-                            st.error(f"Database initialization error: {str(e)}")
-                            st.warning("The app will continue, but database features may be limited.")
-                    
-                    # Store in database
-                    async def store_in_db():
-                        async with AsyncSessionLocal() as session:
-                            size_service = SizeService(session)
-                            db_result = await size_service.process_size_guide(file_path, metadata)
-                            return db_result
-                    
-                    # Run the async function
-                    try:
-                        db_result = asyncio.run(store_in_db())
-                        
-                        if db_result['success']:
-                            # Add the processed data to the knowledge base
-                            st.session_state.jester.add_to_knowledge_base(
-                                json.dumps(result, indent=2),
-                                metadata=result['metadata']
-                            )
-                            
-                            st.success(f"✅ Size guide processed and stored in database! (ID: {db_result['size_guide_id']})")
-                            
-                            # Display the extracted data
-                            st.subheader("📊 Extracted Size Chart")
-                            st.json(result)
-                        else:
-                            st.error(f"❌ Error storing in database: {db_result['error']}")
-                    except Exception as e:
-                        st.error(f"❌ Error storing in database: {str(e)}")
-                        st.warning("The app will continue, but database features may be limited.")
-
-# Right column for chat interface
-with col2:
-    st.header("💬 Chat with Jester")
+        st.session_state.uploaded_image = uploaded_file
+        st.image(uploaded_file, caption="Uploaded Size Guide")
     
+    # Submit button
+    if st.button("Submit and Start Analysis"):
+        if not uploaded_file:
+            st.error("Please upload a size guide image")
+        else:
+            process_metadata_submission()
+            st.rerun()
+
+# Chat Interface Step
+elif st.session_state.current_step == "chat":
     # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.write(message["content"])
     
     # Chat input
-    if prompt := st.chat_input("Ask about size guides, measurements, or standardization..."):
-        # Add user message to chat history
+    if prompt := st.chat_input("Your response..."):
+        # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
         
-        # Get response from Jester
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
+        # If this is the first response and metadata was provided
+        if len(st.session_state.messages) == 2 and any(st.session_state.metadata.values()):
+            if "yes" in prompt.lower():
+                # Process the image with provided metadata
+                with st.spinner("Analyzing size guide image..."):
+                    analysis_result = process_size_guide_image(
+                        st.session_state.uploaded_image,
+                        st.session_state.metadata
+                    )
+                
+                analysis_message = f"""Thank you for confirming. I've analyzed the size guide image and here's what I found:
+
+{analysis_result}
+
+Would you like me to proceed with storing this data in the standardized format? I can explain any adjustments I'm planning to make."""
+                
+                st.session_state.messages.append({"role": "assistant", "content": analysis_message})
+            else:
+                correction_message = "I understand the information needs correction. Please let me know what needs to be changed, and I'll update it accordingly."
+                st.session_state.messages.append({"role": "assistant", "content": correction_message})
+        else:
+            # Handle the case where no metadata was provided or we're past the initial confirmation
+            if len(st.session_state.messages) == 2:
+                # First response when no metadata was provided - analyze image
+                with st.spinner("Analyzing size guide image..."):
+                    analysis_result = process_size_guide_image(
+                        st.session_state.uploaded_image,
+                        {}  # Empty metadata
+                    )
+                
+                analysis_message = f"""I've taken a look at the size guide. Here's what I can see:
+
+{analysis_result}
+
+Let me ask you a few questions to help categorize this properly:
+1. This appears to be from which brand?
+2. Is this for men's, women's, or unisex clothing?
+3. What type of clothing does this size guide cover?"""
+                
+                st.session_state.messages.append({"role": "assistant", "content": analysis_message})
+            else:
+                # Get Jester's response for other messages
                 response = st.session_state.jester.get_response(
                     prompt,
-                    chat_history=st.session_state.messages[:-1]  # Exclude the current message
+                    st.session_state.messages
                 )
-                st.write(response)
                 st.session_state.messages.append({"role": "assistant", "content": response})
+        
+        st.rerun()
+
+    # Add a "Start Over" button
+    if st.sidebar.button("Start Over"):
+        st.session_state.current_step = "metadata"
+        st.session_state.uploaded_image = None
+        st.session_state.metadata = None
+        st.session_state.messages = []
+        st.rerun()

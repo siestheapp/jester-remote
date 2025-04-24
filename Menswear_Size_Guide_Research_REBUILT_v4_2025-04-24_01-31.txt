@@ -1,0 +1,136 @@
+
+Menswear Size Guide Deep Research – Rebuilt Version v4 (2025-04-24)
+
+This document standardizes the structure and interpretation of men's apparel size guides across brands for ingestion into the Tailor database system. It enables automated reasoning, accurate garment mapping, and fit prediction across diverse brand formats.
+
+———————————————————————————————————————
+1. UNIVERSAL CATEGORY STRUCTURE
+———————————————————————————————————————
+Categories all size guides must map to:
+
+- Tops
+- Dress Shirts
+- Bottoms
+- Outerwear
+- Suiting
+- Accessories
+- Footwear
+
+———————————————————————————————————————
+2. SIZE GUIDE STRUCTURE
+———————————————————————————————————————
+Each size guide entry includes:
+
+- brand_id
+- gender
+- category
+- size_label
+- fit_type (Regular, Slim, Tall)
+- unit (in or cm)
+- chest_range, sleeve_range, waist_range, neck_range
+- source_url
+- scope
+- original_category
+- size_guide_header
+
+———————————————————————————————————————
+3. MAPPING RULES
+———————————————————————————————————————
+✔ “Half Chest Width” → “Chest” (double the value)
+✔ “Belt” → “Waist”
+✔ “Body Width”, “Armpit to Armpit”, “Chest Width” → “Chest”
+✔ “Sleeve Length”, “Arm Length” → “Sleeve”
+✔ Combine units where available
+
+———————————————————————————————————————
+4. AUTOMAPPING LOGIC
+———————————————————————————————————————
+- Normalize raw brand-specific terms into universal structure
+- Track mappings in brand_automap
+- Store original category in category_originals
+
+———————————————————————————————————————
+5. CATEGORY LOGIC
+———————————————————————————————————————
+- Theory Polo under “Outerwear” → Tops
+- Banana Republic “Shirts & Sweaters” → Tops
+- Patagonia Outerwear includes hoodies → apply flexibly
+
+———————————————————————————————————————
+6. FIT ZONE COMPATIBILITY
+———————————————————————————————————————
+- Tight, Perfect, Relaxed Fit Zones supported
+- Comparison of user_fit_zones with garment measurements
+
+———————————————————————————————————————
+7. TRACEABILITY
+———————————————————————————————————————
+- Log ingestion metadata: source URL, original text, ingestion_uuid
+- Enable debugging and correction
+
+———————————————————————————————————————
+8. UNIT TRACKING
+———————————————————————————————————————
+- Track inch and cm availability
+- Store both if present
+- Prefer exact ranges (e.g., 104.1–106.7 cm)
+
+———————————————————————————————————————
+9. VERSIONING
+———————————————————————————————————————
+Original: Menswear Size Guide Research_2025-04-05_22-24.txt  
+Rebuilt: Version v1 (2025-04-23)  
+Extended: Version v2 (with AI ingestion logic)  
+Expanded: Version v3 (Jester architecture and cost logic)  
+🆕 Current: Version v4 (includes vector matcher implementation from a3_chat_vector.py)
+
+———————————————————————————————————————
+10. INTELLIGENT INGESTION SYSTEM – "JESTER"
+———————————————————————————————————————
+Jester is the latest version of the ingestion engine (formerly A3). It uses a hybrid of LLM reasoning + vector embeddings to fully understand complex, ambiguous size guide inputs.
+
+🧠 Core Features:
+- GPT-4 Vision to interpret screenshots of size charts
+- Semantic automapping of headers using embeddings (OpenAI `text-embedding-3-small`)
+- Inference of garment type, units, and missing metadata
+- Field normalization via cosine similarity
+- Custom post-processing rules (e.g., double 1/2 Chest, convert Belt → Waist)
+- Audit trail: GPT input/output, raw → mapped terms, SQL log, and source image
+
+📦 Output:
+- Full SQL INSERT statements into brand-specific tables (e.g., reiss_men_tops_regular_in)
+- Optional: logs stored in `ingestion_logs`, original file in `uploads/`, GPT response in `logs/`
+
+🧪 Designed to support:
+- Fast ingestion from screenshots
+- Complex guides with unstructured layouts
+- Ambiguities (e.g., "Arm Length from Center Back")
+- Cost efficiency by minimizing GPT calls using local embeddings
+
+💸 Cost Advantage:
+- One GPT call per guide (vs. multi-turn Assistants API)
+- Embeddings cost a fraction of a cent and run locally
+- Scalable ingestion with traceability and version control
+
+🌍 Collaborative Deployment:
+- Hosted in private GitHub repo (tailor-jester-ingestion)
+- Connected to Supabase (tailor2)
+- Can be run locally or through a web UI (e.g., Streamlit or FastAPI)
+
+———————————————————————————————————————
+🧪 APPENDIX: VECTOR MATCHING ENGINE (Jester Core – from a3_chat_vector.py)
+———————————————————————————————————————
+A key part of Jester is the semantic automapping system that intelligently resolves ambiguous header terms from size guides. This is powered by OpenAI’s embedding API and a cosine similarity engine.
+
+Key components:
+- A list of canonical fields: ["chest", "waist", "sleeve", "neck", "hip"]
+- An embedding function to convert any string (e.g., "Pit to Pit") into a vector
+- A similarity function that compares each raw field to every canonical term
+- The system logs and returns the best match along with a confidence score
+
+Example:
+"1/2 Chest Width" → [embedded] → best match: "chest" (similarity: 0.91)
+
+This logic is implemented in the script `a3_chat_vector.py` and can be run locally to normalize terms before building SQL.
+
+The matching system can also flag low-confidence matches for human validation, ensuring ingestion quality remains high even for edge-case guides.

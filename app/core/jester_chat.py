@@ -21,9 +21,13 @@ class JesterChat:
     
     def __init__(self):
         """Initialize Jester with vector search capabilities and expert knowledge."""
+        # Create data directories if they don't exist
+        os.makedirs(os.path.dirname(config.VECTOR_INDEX_PATH), exist_ok=True)
+        os.makedirs(os.path.dirname(config.VECTOR_METADATA_PATH), exist_ok=True)
+        
         self.vector_search = JesterVectorSearch(
-            index_path=config.VECTOR_INDEX_PATH,
-            chunks_path=config.VECTOR_METADATA_PATH
+            index_path=os.path.join("data", "vector", "faiss_index"),
+            chunks_path=os.path.join("data", "vector", "chunks.json")
         )
         
         self.system_prompt = """You are Jester, an expert AI assistant specializing in apparel size guide analysis and standardization. Your core capabilities include:
