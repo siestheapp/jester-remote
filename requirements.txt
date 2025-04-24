@@ -34,3 +34,4 @@ asyncpg>=0.29.0
 alembic>=1.13.0
 nest-asyncio>=1.6.0
 greenlet>=3.0.0
+python-multipart==0.0.20
