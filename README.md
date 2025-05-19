@@ -2,30 +2,37 @@
 
 Jester is an intelligent system that processes, standardizes, and provides insights about apparel size guides. It combines computer vision, natural language processing, and vector search to create a powerful size guide knowledge base.
 
-## 🚀 Quick Start
+# Quick Setup Guide
 
-```bash
-# Clone the repository
-git clone https://github.com/siestheapp/jester-remote.git
-cd jester
+1. Clone the repo and cd into the project directory:
+   ```bash
+   git clone <repo-url>
+   cd jester
+   ```
+2. Create and activate a virtual environment:
+   ```bash
+   python3 -m venv venv
+   source venv/bin/activate
+   ```
+3. Install dependencies:
+   ```bash
+   pip install -r requirements.txt
+   ```
+4. Install the project in editable mode:
+   ```bash
+   pip install -e .
+   ```
+5. Copy .env.example to .env and fill in your API keys and database URL.
+6. (First time only) Initialize the vector search:
+   ```bash
+   python scripts/initialize_vector_search.py
+   ```
+7. Start the app:
+   ```bash
+   streamlit run ui/streamlit_app.py
+   ```
 
-# Set up virtual environment
-python -m venv venv
-source venv/bin/activate  # or `venv\Scripts\activate` on Windows
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Set up environment variables
-cp .env.example .env
-# Edit .env with your configuration
-
-# Initialize vector search
-python scripts/initialize_vector_search.py
-
-# Run the application
-streamlit run ui/streamlit_app.py
-```
+---
 
 ## 🏗️ Architecture
 
