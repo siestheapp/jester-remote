@@ -19,15 +19,18 @@ class JesterChat:
     adding information to the knowledge base, and managing chat history.
     """
     
-    def __init__(self):
+    def __init__(self, vector_search=None):
         """Initialize Jester with vector search capabilities and expert knowledge."""
         # Create data directories if they don't exist
         os.makedirs("data/vector", exist_ok=True)
         
-        self.vector_search = JesterVectorSearch(
-            index_path="data/vector/faiss_index",
-            chunks_path="data/vector/chunks.json"
-        )
+        if vector_search is not None:
+            self.vector_search = vector_search
+        else:
+            self.vector_search = JesterVectorSearch(
+                index_path="data/vector/faiss_index",
+                chunks_path="data/vector/chunks.json"
+            )
         
         self.system_prompt = """You are Jester, an expert AI assistant specializing in apparel size guide analysis and standardization. Your core capabilities include:
 

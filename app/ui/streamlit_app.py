@@ -57,42 +57,51 @@ if not st.session_state.db_initialized:
 
 # Step 1: Upload and Initial Metadata
 if st.session_state.current_step == "upload":
-    st.header("📄 Upload Size Guide")
-    
-    # Essential metadata first
-    brand = st.text_input("Brand (e.g., Banana Republic)")
-    gender = st.selectbox("Gender", options=["", "Men", "Women", "Unisex"])
-    
-    # File upload
-    uploaded_file = st.file_uploader("Upload a size guide image", type=["jpg", "jpeg", "png"])
-    
+    st.header("📄 Size Guide Information")
+    col1, col2 = st.columns(2)
+    with col1:
+        brand = st.text_input("Brand (e.g., Banana Republic)")
+        gender = st.selectbox("Gender", options=["", "Men", "Women", "Unisex"])
+        size_guide_header = st.text_input("Size Guide Header (e.g., Shirts & Sweaters)")
+        st.header("📁 Upload Size Guide")
+        uploaded_file = st.file_uploader("Upload a size guide image", type=["jpg", "jpeg", "png"])
+    with col2:
+        source_url = st.text_input("Source URL (where the size guide was found)")
+        unit = st.radio("Unit of Measurement", options=["", "inches", "centimeters"], horizontal=True)
+        scope = st.selectbox(
+            "Size Guide Scope",
+            options=["", "This specific item only", "A category (e.g., Tops, Outerwear)", "All clothing for this gender"]
+        )
     if uploaded_file:
         st.image(uploaded_file, caption="Uploaded Size Guide", use_container_width=True)
-        
-        if st.button("Begin Analysis", disabled=not (brand and gender)):
-            if not brand or not gender:
-                st.warning("⚠️ Please provide the brand and gender before proceeding.")
-            else:
-                with st.spinner("Processing size guide..."):
-                    # Save the uploaded file
-                    file_path = os.path.join(config.UPLOADS_DIR, uploaded_file.name)
-                    os.makedirs(config.UPLOADS_DIR, exist_ok=True)
-                    with open(file_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-                    
-                    # Store initial metadata
-                    st.session_state.metadata = {
-                        'brand': brand,
-                        'gender': gender,
-                        'file_path': file_path
-                    }
-                    
-                    # Process the image
-                    st.session_state.analysis_result = process_size_guide_image(file_path)
-                    st.session_state.current_step = "analysis"
-                    st.rerun()
-
-# Step 2: AI Analysis and Additional Information
+        if st.button("🚀 Process Size Guide"):
+            with st.spinner("Processing size guide..."):
+                file_path = os.path.join(config.UPLOADS_DIR, uploaded_file.name)
+                os.makedirs(config.UPLOADS_DIR, exist_ok=True)
+                with open(file_path, "wb") as f:
+                    f.write(uploaded_file.getbuffer())
+                result = process_size_guide_image(file_path)
+                metadata = {
+                    'brand': brand,
+                    'gender': gender,
+                    'size_guide_header': size_guide_header,
+                    'source_url': source_url,
+                    'unit': unit,
+                    'scope': scope
+                }
+                # Only add non-empty metadata
+                result['metadata'].update({k: v for k, v in metadata.items() if v})
+                # Use Jester to analyze the size guide and generate the first assistant message
+                jester = st.session_state.jester
+                analysis_result = jester.analyze_size_guide(result, result['metadata'])
+                st.session_state.messages = []
+                st.session_state.messages.append({
+                    "role": "assistant",
+                    "content": analysis_result["analysis"]
+                })
+                st.session_state.processed_result = result
+                st.session_state.current_step = "chat"
+                st.rerun()
 elif st.session_state.current_step == "analysis":
     st.header("🔍 Size Guide Analysis")
     
@@ -146,8 +155,6 @@ elif st.session_state.current_step == "analysis":
             st.session_state.proposed_ingestion = asyncio.run(prepare_ingestion())
             st.session_state.current_step = "approval"
             st.rerun()
-
-# Step 3: Review and Approval
 elif st.session_state.current_step == "approval":
     st.header("✅ Review and Approve Ingestion")
     
@@ -183,33 +190,23 @@ elif st.session_state.current_step == "approval":
         if st.button("👎 Reject and Revise"):
             st.session_state.current_step = "analysis"
             st.rerun()
-
-# Footer with step indicator
-st.markdown("---")
-st.write(f"Current step: {st.session_state.current_step}")
-
-# Right column for chat interface
-with col2:
+elif st.session_state.current_step == "chat":
     st.header("💬 Chat with Jester")
-    
-    # Display chat messages
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.write(message["content"])
-    
-    # Chat input
     if prompt := st.chat_input("Ask about size guides, measurements, or standardization..."):
-        # Add user message to chat history
         st.session_state.messages.append({"role": "user", "content": prompt})
         with st.chat_message("user"):
             st.write(prompt)
-        
-        # Get response from Jester
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 response = st.session_state.jester.get_response(
                     prompt,
-                    chat_history=st.session_state.messages[:-1]  # Exclude the current message
+                    chat_history=st.session_state.messages[:-1]
                 )
                 st.write(response)
-                st.session_state.messages.append({"role": "assistant", "content": response}) 
+                st.session_state.messages.append({"role": "assistant", "content": response})
+
+st.markdown("---")
+st.write(f"Current step: {st.session_state.current_step}") 
