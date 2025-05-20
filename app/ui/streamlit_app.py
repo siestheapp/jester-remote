@@ -10,28 +10,29 @@ import json
 import asyncio
 import nest_asyncio
 import warnings
+from pathlib import Path
+from datetime import datetime
+import requests
+import re
+import io
+from PIL import Image as PILImage, UnidentifiedImageError
 
-# Import core functionality directly
+# Import core functionality
 from app.core.jester_chat import JesterChat
-from app.core.vision import process_size_guide_image
 from app.services.size_service import SizeService
 from app.db.database import AsyncSessionLocal, init_db
 from app.config import config
 
 # Suppress specific warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="torch")
-
-# Apply nest_asyncio to allow nested event loops
 nest_asyncio.apply()
-
-# Load environment variables
 load_dotenv()
 
-# Initialize the chat interface
+# Page config
 st.set_page_config(page_title="Jester - Size Guide Analysis", layout="wide")
 st.title("🧠 Jester - Size Guide Analysis Assistant")
 
-# Initialize session state
+# Session state
 if "messages" not in st.session_state:
     st.session_state.messages = []
 if "jester" not in st.session_state:
@@ -47,7 +48,7 @@ if "proposed_ingestion" not in st.session_state:
 if "metadata" not in st.session_state:
     st.session_state.metadata = {}
 
-# Initialize database if needed
+# Initialize DB
 if not st.session_state.db_initialized:
     try:
         asyncio.run(init_db())
@@ -58,41 +59,114 @@ if not st.session_state.db_initialized:
 # Step 1: Upload and Initial Metadata
 if st.session_state.current_step == "upload":
     st.header("📄 Upload Size Guide")
-    
-    # Essential metadata first
-    brand = st.text_input("Brand (e.g., Banana Republic)")
-    gender = st.selectbox("Gender", options=["", "Men", "Women", "Unisex"])
-    
-    # File upload
+
+    # Optional metadata
+    brand = st.text_input("Brand (optional)")
+    gender = st.selectbox("Gender (optional)", options=["", "Men", "Women", "Unisex"])
+    size_guide_header = st.text_input("Size Guide Header (optional)")
+    source_url = st.text_input("Source URL (optional)")
+    unit = st.radio("Unit of Measurement (optional)", options=["", "inches", "centimeters"], horizontal=True)
+    scope = st.selectbox("Size Guide Scope (optional)", options=["", "This specific item only", "A category (e.g., Tops, Outerwear)", "All clothing for this gender"])
+
     uploaded_file = st.file_uploader("Upload a size guide image", type=["jpg", "jpeg", "png"])
-    
+
+    st.info("You can upload a size guide image without filling in metadata. Metadata is optional and can be added later.")
+
     if uploaded_file:
+        file_bytes = uploaded_file.getvalue()
+        safe_filename = re.sub(r"[^\w_.-]", "_", uploaded_file.name)
+
         st.image(uploaded_file, caption="Uploaded Size Guide", use_container_width=True)
-        
-        if st.button("Begin Analysis", disabled=not (brand and gender)):
-            if not brand or not gender:
-                st.warning("⚠️ Please provide the brand and gender before proceeding.")
-            else:
-                with st.spinner("Processing size guide..."):
-                    # Save the uploaded file
-                    file_path = os.path.join(config.UPLOADS_DIR, uploaded_file.name)
-                    os.makedirs(config.UPLOADS_DIR, exist_ok=True)
-                    with open(file_path, "wb") as f:
-                        f.write(uploaded_file.getbuffer())
-                    
-                    # Store initial metadata
+        st.write(f"File name: {uploaded_file.name}")
+        st.write(f"File type: {uploaded_file.type}")
+        st.write(f"File size: {uploaded_file.size} bytes")
+
+        if uploaded_file.size < 5000:
+            st.warning("⚠️ This image looks very small. If you dragged a screenshot thumbnail, try uploading from Finder instead.")
+
+        # Validate the image
+        try:
+            img = PILImage.open(io.BytesIO(file_bytes))
+            img.verify()
+        except UnidentifiedImageError as e:
+            st.error(f"❌ Uploaded file is not a valid image. Try uploading from Finder instead of dragging a screenshot thumbnail.")
+            st.stop()
+
+        if st.button("Submit and Continue to Chat"):
+            try:
+                files = {
+                    "file": (safe_filename, io.BytesIO(file_bytes), uploaded_file.type or "image/png")
+                }
+
+                data = {
+                    "brand": brand,
+                    "gender": gender,
+                    "size_guide_header": size_guide_header,
+                    "source_url": source_url,
+                    "unit_of_measurement": unit,
+                    "size_guide_scope": scope
+                }
+                data = {k: v for k, v in data.items() if v}
+
+                response = requests.post(
+                    "http://localhost:8000/api/process-size-guide",
+                    files=files,
+                    data=data
+                )
+
+                if response.status_code == 200:
+                    result = response.json()
+                    st.session_state.analysis_result = result["data"]
                     st.session_state.metadata = {
                         'brand': brand,
                         'gender': gender,
-                        'file_path': file_path
+                        'size_guide_header': size_guide_header,
+                        'source_url': source_url,
+                        'unit': unit,
+                        'scope': scope,
+                        'file_path': result["data"]["metadata"]["source_image"]
                     }
-                    
-                    # Process the image
-                    st.session_state.analysis_result = process_size_guide_image(file_path)
-                    st.session_state.current_step = "analysis"
+                    st.session_state.current_step = "chat"
                     st.rerun()
+                else:
+                    st.error(f"Error processing image: {response.status_code} - {response.text}")
+                    st.stop()
 
-# Step 2: AI Analysis and Additional Information
+            except Exception as e:
+                st.error(f"Unexpected error during upload: {str(e)}")
+                st.stop()
+
+
+# Step 2: Chat interface after upload
+elif st.session_state.current_step == "chat":
+    st.header("💬 Chat with Jester about your Size Guide")
+    if 'file_path' in st.session_state.metadata:
+        st.image(st.session_state.metadata['file_path'], caption="Uploaded Size Guide", width=400)
+    st.info("You can chat with Jester about the uploaded size guide, measurements, or standardization.")
+    col1, col2 = st.columns([2, 1])
+    with col2:
+        st.subheader("Chat")
+        for message in st.session_state.messages:
+            with st.chat_message(message["role"]):
+                st.write(message["content"])
+        if prompt := st.chat_input("Ask about size guides, measurements, or standardization..."):
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            with st.chat_message("user"):
+                st.write(prompt)
+            with st.chat_message("assistant"):
+                with st.spinner("Thinking..."):
+                    response = st.session_state.jester.get_response(
+                        prompt,
+                        chat_history=st.session_state.messages[:-1]
+                    )
+                    st.write(response)
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+    # Button to proceed to analysis
+    if st.button("Continue to Analysis"):
+        st.session_state.current_step = "analysis"
+        st.rerun()
+
+# Step 3: AI Analysis and Additional Information
 elif st.session_state.current_step == "analysis":
     st.header("🔍 Size Guide Analysis")
     
@@ -147,7 +221,7 @@ elif st.session_state.current_step == "analysis":
             st.session_state.current_step = "approval"
             st.rerun()
 
-# Step 3: Review and Approval
+# Step 4: Review and Approval
 elif st.session_state.current_step == "approval":
     st.header("✅ Review and Approve Ingestion")
     
@@ -186,30 +260,4 @@ elif st.session_state.current_step == "approval":
 
 # Footer with step indicator
 st.markdown("---")
-st.write(f"Current step: {st.session_state.current_step}")
-
-# Right column for chat interface
-with col2:
-    st.header("💬 Chat with Jester")
-    
-    # Display chat messages
-    for message in st.session_state.messages:
-        with st.chat_message(message["role"]):
-            st.write(message["content"])
-    
-    # Chat input
-    if prompt := st.chat_input("Ask about size guides, measurements, or standardization..."):
-        # Add user message to chat history
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        with st.chat_message("user"):
-            st.write(prompt)
-        
-        # Get response from Jester
-        with st.chat_message("assistant"):
-            with st.spinner("Thinking..."):
-                response = st.session_state.jester.get_response(
-                    prompt,
-                    chat_history=st.session_state.messages[:-1]  # Exclude the current message
-                )
-                st.write(response)
-                st.session_state.messages.append({"role": "assistant", "content": response}) 
+st.write(f"Current step: {st.session_state.current_step}") 

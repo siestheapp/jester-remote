@@ -162,4 +162,13 @@ This project is licensed under the terms of the [LICENSE](LICENSE) file.
 
 - [Project Documentation](docs/)
 - [Issue Tracker](https://github.com/siestheapp/jester/issues)
-- [Change Log](CHANGELOG.md) 
+- [Change Log](CHANGELOG.md)
+
+## Troubleshooting PNG Screenshot Uploads
+
+**Note:** If you take a screenshot and immediately drag it into the app, the upload may fail because the file is not yet fully saved (incomplete file). 
+
+- Wait until the screenshot appears in Finder and the thumbnail preview disappears before dragging it into the app.
+- This ensures the file is complete and can be processed by Streamlit and Pillow.
+
+If you still encounter issues, try re-saving the screenshot or converting it to JPEG/PNG using an image editor. 

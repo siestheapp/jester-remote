@@ -1,8 +1,10 @@
 import openai
+from openai import AsyncOpenAI
 import base64
 import os
 import json
 import datetime
+from typing import Optional, Dict, Any
 from dotenv import load_dotenv
 from ..utils.vector_mapper import match_to_standard
 
@@ -14,21 +16,36 @@ print(f"✅ .env loaded? {'Yes' if env_loaded else 'No'}")
 api_key = os.getenv("OPENAI_API_KEY")
 print(f"✅ API KEY FOUND? {'Yes' if api_key else 'No'}")
 
-# Set it for the OpenAI SDK
-openai.api_key = api_key
+# Initialize the async OpenAI client
+client = AsyncOpenAI(api_key=api_key)
 
 
-def image_to_base64(path):
+def image_to_base64(path: str) -> str:
     """Convert an image file to base64 encoding."""
     with open(path, "rb") as f:
         return base64.b64encode(f.read()).decode("utf-8")
 
 
-def run_vision_prompt(image_path):
+def get_image_mime_type(path: str) -> str:
+    """Get the MIME type of an image file based on its extension."""
+    ext = os.path.splitext(path)[1].lower()
+    mime_types = {
+        '.jpg': 'image/jpeg',
+        '.jpeg': 'image/jpeg',
+        '.png': 'image/png',
+        '.gif': 'image/gif',
+        '.bmp': 'image/bmp',
+        '.webp': 'image/webp'
+    }
+    return mime_types.get(ext, 'image/jpeg')  # Default to JPEG if unknown
+
+
+async def run_vision_prompt(image_path: str) -> str:
     """Run GPT-4 Vision analysis on a size guide image."""
     base64_image = image_to_base64(image_path)
+    mime_type = get_image_mime_type(image_path)
 
-    response = openai.chat.completions.create(
+    response = await client.chat.completions.create(
         model="gpt-4o",
         messages=[
             {
@@ -47,7 +64,7 @@ def run_vision_prompt(image_path):
                     {
                         "type": "image_url",
                         "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}"
+                            "url": f"data:{mime_type};base64,{base64_image}"
                         }
                     }
                 ]
@@ -56,10 +73,13 @@ def run_vision_prompt(image_path):
         max_tokens=2000
     )
 
+    if not response.choices or not response.choices[0].message or not response.choices[0].message.content:
+        raise ValueError("No response from OpenAI API")
+    
     return response.choices[0].message.content
 
 
-def process_size_guide_image(image_path: str, metadata: dict = None) -> dict:
+async def process_size_guide_image(image_path: str, metadata: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
     Process a size guide image and return structured data.
     
@@ -71,7 +91,7 @@ def process_size_guide_image(image_path: str, metadata: dict = None) -> dict:
         dict: Structured data containing the size guide information
     """
     # Get the raw vision analysis
-    vision_output = run_vision_prompt(image_path)
+    vision_output = await run_vision_prompt(image_path)
     
     try:
         # Try to parse the JSON from the vision output

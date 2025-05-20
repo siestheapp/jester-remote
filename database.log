@@ -1,0 +1,21 @@
+2025-05-18 23:36:09,151 - INFO - Attempting to connect to database...
+2025-05-18 23:36:09,152 - ERROR - Error: invalid dsn: invalid connection option "postgresql+asyncpg://postgres:efVtower12@db.lntahfecexbduagqdhrr.supabase.co:6543/postgres?statement_cache_size"
+
+2025-05-19 00:24:33,017 - INFO - Attempting to connect to database...
+2025-05-19 00:24:33,018 - ERROR - Error: invalid dsn: invalid connection option "postgresql+asyncpg://postgres:efVtower12@db.lntahfecexbduagqdhrr.supabase.co:6543/postgres?statement_cache_size"
+
+2025-05-19 00:24:53,580 - INFO - Attempting to connect to database...
+2025-05-19 00:24:53,581 - ERROR - Error: invalid dsn: invalid connection option "postgresql+asyncpg://postgres:efVtower12@db.lntahfecexbduagqdhrr.supabase.co:6543/postgres?statement_cache_size"
+
+2025-05-19 00:25:00,874 - INFO - Using DATABASE_URL: postgresql://postgres:efVtower12@db.lntahfecexbduagqdhrr.supabase.co:6543/postgres
+2025-05-19 00:25:00,874 - INFO - Attempting to connect to database...
+2025-05-19 00:26:15,940 - ERROR - Error: connection to server at "db.lntahfecexbduagqdhrr.supabase.co" (3.221.238.63), port 6543 failed: Operation timed out
+	Is the server running on that host and accepting TCP/IP connections?
+
+2025-05-19 01:13:28,427 - INFO - Using DATABASE_URL: postgresql://postgres:efVtower12@db.lntahfecexbduagqdhrr.supabase.co:5432/postgres
+2025-05-19 01:13:28,428 - INFO - Attempting to connect to database...
+2025-05-19 01:13:28,854 - INFO - Connected successfully!
+2025-05-19 01:13:28,861 - INFO - Database: postgres
+2025-05-19 01:13:28,861 - INFO - User: postgres
+2025-05-19 01:13:28,861 - INFO - Version: PostgreSQL 15.8 on aarch64-unknown-linux-gnu, compiled by gcc (GCC) 13.2.0, 64-bit
+2025-05-19 01:13:28,862 - INFO - Connection closed

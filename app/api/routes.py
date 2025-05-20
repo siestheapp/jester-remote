@@ -8,6 +8,7 @@ from typing import Dict, Any, Optional
 import os
 import json
 from datetime import datetime
+from pathlib import Path
 
 from app.core.vision import process_size_guide_image
 from app.core.jester_chat import JesterChat
@@ -23,7 +24,7 @@ router = APIRouter(
 
 # Initialize services
 vector_search = JesterVectorSearch()
-chat = JesterChat(vector_search)
+chat = JesterChat()
 
 @router.get("/health")
 async def health_check():
@@ -33,13 +34,26 @@ async def health_check():
 @router.post("/process-size-guide")
 async def process_size_guide(
     file: UploadFile = File(...),
-    brand: str = Form(...),
-    gender: str = Form(...),
-    size_guide_header: str = Form(...),
-    source_url: str = Form(...),
-    unit_of_measurement: str = Form(...),
-    size_guide_scope: str = Form(...)
+    brand: Optional[str] = Form(None),
+    gender: Optional[str] = Form(None),
+    size_guide_header: Optional[str] = Form(None),
+    source_url: Optional[str] = Form(None),
+    unit_of_measurement: Optional[str] = Form(None),
+    size_guide_scope: Optional[str] = Form(None)
 ):
+    print("==== DEBUG: Request Received ====")
+    print(f"Filename: {file.filename}")
+    print(f"Content-Type: {file.content_type}")
+    print(f"Brand: {brand}")
+    print(f"Unit: {unit_of_measurement}")
+    try:
+        content = await file.read()
+        print(f"File Size: {len(content)} bytes")
+        file.file.seek(0)
+    except Exception as e:
+        print(f"Failed to read file: {e}")
+
+
     """
     Process a size guide image and extract size information.
     
@@ -57,15 +71,18 @@ async def process_size_guide(
     """
     try:
         # Ensure upload directory exists
-        os.makedirs(config.UPLOADS_DIR, exist_ok=True)
+        upload_dir = Path(config.UPLOADS_DIR)
+        upload_dir.mkdir(parents=True, exist_ok=True)
         
         # Save the uploaded file
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"{brand}_{timestamp}_{file.filename}"
-        file_path = os.path.join(config.UPLOADS_DIR, filename)
+        filename = f"{timestamp}_{file.filename}"
+        file_path = upload_dir / filename
         
+        # Read the file content and write it
+        content = await file.read()
+        print(f"Received file: {file.filename}, size: {len(content)} bytes")  # Diagnostic: print file size
         with open(file_path, "wb") as f:
-            content = await file.read()
             f.write(content)
         
         # Process the image
@@ -91,7 +108,24 @@ async def process_size_guide(
         
         return {"status": "success", "data": result}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        # Get detailed error information
+        import traceback
+        error_details = traceback.format_exc()
+        print(f"Exception in process_size_guide: {e}")
+        print(f"Detailed error: {error_details}")
+        print(f"File content type: {file.content_type}")
+        print(f"File size: {len(content)} bytes")
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "error": str(e),
+                "details": error_details,
+                "file_info": {
+                    "content_type": file.content_type,
+                    "size_bytes": len(content)
+                }
+            }
+        )
 
 @router.post("/chat")
 async def chat_endpoint(query: str):
