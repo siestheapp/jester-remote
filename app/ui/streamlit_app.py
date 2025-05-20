@@ -95,9 +95,16 @@ if st.session_state.current_step == "upload":
                 jester = st.session_state.jester
                 analysis_result = jester.analyze_size_guide(result, result['metadata'])
                 st.session_state.messages = []
+                # Compose a message with both extracted data and analysis
+                extracted_data = result.get('extracted_data') or result.get('table') or result
+                message_content = (
+                    f"**Extracted Data:**\n"
+                    f"```json\n{json.dumps(extracted_data, indent=2)}\n```\n\n"
+                    f"**Analysis:**\n{analysis_result['analysis']}"
+                )
                 st.session_state.messages.append({
                     "role": "assistant",
-                    "content": analysis_result["analysis"]
+                    "content": message_content
                 })
                 st.session_state.processed_result = result
                 st.session_state.current_step = "chat"
