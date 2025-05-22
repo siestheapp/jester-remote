@@ -4,12 +4,15 @@ from dotenv import load_dotenv
 from app.core.jester_chat import JesterChat
 from app.core.vision import process_size_guide_image
 from app.services.size_service import SizeService
-from app.db.database import AsyncSessionLocal, init_db
+from app.db.database import AsyncSessionLocal, init_db, get_db
 import json
 import asyncio
 import nest_asyncio
 import warnings
 import tempfile
+from app.services.ingestion_service import ingest_size_guide
+from sqlalchemy.ext.asyncio import AsyncSession
+import sys
 
 # Suppress specific warnings
 warnings.filterwarnings("ignore", category=RuntimeWarning, module="torch")
@@ -200,6 +203,22 @@ elif st.session_state.current_step == "chat":
                                 )
                                 analysis_message = f"""Thank you for confirming. I've analyzed the size guide image and here's what I found:\n\n{analysis_result}\n\nWould you like me to proceed with storing this data in the standardized format? I can explain any adjustments I'm planning to make."""
                                 st.session_state.messages.append({"role": "assistant", "content": analysis_message})
+                                # --- Ingest into DB after user confirms ---
+                                nest_asyncio.apply()
+                                
+                                async def do_ingest():
+                                    async for session in get_db():
+                                        try:
+                                            await ingest_size_guide(analysis_result, session)
+                                            st.session_state.messages.append({"role": "assistant", "content": "✅ Size guide successfully stored in the database."})
+                                        except Exception as e:
+                                            st.session_state.messages.append({"role": "assistant", "content": f"❌ Error storing size guide: {str(e)}"})
+
+                                try:
+                                    loop = asyncio.get_running_loop()
+                                    loop.run_until_complete(do_ingest())
+                                except RuntimeError:
+                                    asyncio.run(do_ingest())
                             except Exception as e:
                                 st.error(f"Error processing image: {str(e)}")
                         else:
