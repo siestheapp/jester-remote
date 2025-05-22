@@ -165,75 +165,76 @@ elif st.session_state.current_step == "chat":
     for message in st.session_state.messages:
         with st.chat_message(message["role"]):
             st.write(message["content"])
-    
+
+    # Show 'Jester is typing...' if waiting for assistant response
+    if st.session_state.get("pending_assistant_response", False):
+        with st.chat_message("assistant"):
+            st.write("Jester is typing...")
+
     # Chat input
-    if prompt := st.chat_input("Your response..."):
-        # Add user message
+    prompt = st.chat_input("Your response...")
+    if prompt:
+        # Add user message and set pending flag
         st.session_state.messages.append({"role": "user", "content": prompt})
-        
-        # If this is the first response and metadata was provided
-        if len(st.session_state.messages) == 2 and any(st.session_state.metadata.values()):
-            if "yes" in prompt.lower():
-                # Save uploaded file and process the image with provided metadata
-                with st.spinner("Analyzing size guide image..."):
-                    file_path = save_uploaded_file(st.session_state.uploaded_image)
-                    if file_path:
-                        try:
-                            analysis_result = process_size_guide_image(
-                                image_path=file_path,
-                                metadata=st.session_state.metadata
-                            )
-                            
-                            analysis_message = f"""Thank you for confirming. I've analyzed the size guide image and here's what I found:
-
-{analysis_result}
-
-Would you like me to proceed with storing this data in the standardized format? I can explain any adjustments I'm planning to make."""
-                            
-                            st.session_state.messages.append({"role": "assistant", "content": analysis_message})
-                        except Exception as e:
-                            st.error(f"Error processing image: {str(e)}")
-                    else:
-                        st.error("Failed to process the uploaded file.")
-            else:
-                correction_message = "I understand the information needs correction. Please let me know what needs to be changed, and I'll update it accordingly."
-                st.session_state.messages.append({"role": "assistant", "content": correction_message})
-        else:
-            # Handle the case where no metadata was provided or we're past the initial confirmation
-            if len(st.session_state.messages) == 2:
-                # First response when no metadata was provided - analyze image
-                with st.spinner("Analyzing size guide image..."):
-                    file_path = save_uploaded_file(st.session_state.uploaded_image)
-                    if file_path:
-                        try:
-                            analysis_result = process_size_guide_image(
-                                image_path=file_path,
-                                metadata={}  # Empty metadata
-                            )
-                            
-                            analysis_message = f"""I've taken a look at the size guide. Here's what I can see:
-
-{analysis_result}
-
-Let me ask you a few questions to help categorize this properly:
-1. This appears to be from which brand?
-2. Is this for men's, women's, or unisex clothing?
-3. What type of clothing does this size guide cover?"""
-                            
-                            st.session_state.messages.append({"role": "assistant", "content": analysis_message})
-                        except Exception as e:
-                            st.error(f"Error processing image: {str(e)}")
-                    else:
-                        st.error("Failed to process the uploaded file.")
-            else:
-                # Get Jester's response for other messages
-                response = st.session_state.jester.get_response(
-                    prompt,
-                    st.session_state.messages
-                )
-                st.session_state.messages.append({"role": "assistant", "content": response})
-        
+        st.session_state.pending_assistant_response = True
         st.rerun()
+
+    # If pending assistant response, process it now
+    if st.session_state.get("pending_assistant_response", False):
+        # Only process if the last message is from the user
+        if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
+            prompt = st.session_state.messages[-1]["content"]
+            # Ensure metadata is a dict
+            metadata = st.session_state.metadata if st.session_state.metadata is not None else {}
+            # If this is the first response and metadata was provided
+            if len(st.session_state.messages) == 2 and any(metadata.values()):
+                if "yes" in prompt.lower():
+                    # Save uploaded file and process the image with provided metadata
+                    with st.spinner("Analyzing size guide image..."):
+                        file_path = save_uploaded_file(st.session_state.uploaded_image)
+                        if file_path:
+                            try:
+                                analysis_result = process_size_guide_image(
+                                    image_path=file_path,
+                                    metadata=metadata
+                                )
+                                analysis_message = f"""Thank you for confirming. I've analyzed the size guide image and here's what I found:\n\n{analysis_result}\n\nWould you like me to proceed with storing this data in the standardized format? I can explain any adjustments I'm planning to make."""
+                                st.session_state.messages.append({"role": "assistant", "content": analysis_message})
+                            except Exception as e:
+                                st.error(f"Error processing image: {str(e)}")
+                        else:
+                            st.error("Failed to process the uploaded file.")
+                else:
+                    correction_message = "I understand the information needs correction. Please let me know what needs to be changed, and I'll update it accordingly."
+                    st.session_state.messages.append({"role": "assistant", "content": correction_message})
+            else:
+                # Handle the case where no metadata was provided or we're past the initial confirmation
+                if len(st.session_state.messages) == 2:
+                    # First response when no metadata was provided - analyze image
+                    with st.spinner("Analyzing size guide image..."):
+                        file_path = save_uploaded_file(st.session_state.uploaded_image)
+                        if file_path:
+                            try:
+                                analysis_result = process_size_guide_image(
+                                    image_path=file_path,
+                                    metadata={}  # Empty metadata
+                                )
+                                analysis_message = f"""I've taken a look at the size guide. Here's what I can see:\n\n{analysis_result}\n\nLet me ask you a few questions to help categorize this properly:\n1. This appears to be from which brand?\n2. Is this for men's, women's, or unisex clothing?\n3. What type of clothing does this size guide cover?"""
+                                st.session_state.messages.append({"role": "assistant", "content": analysis_message})
+                            except Exception as e:
+                                st.error(f"Error processing image: {str(e)}")
+                        else:
+                            st.error("Failed to process the uploaded file.")
+                else:
+                    # Get Jester's response for other messages
+                    response = st.session_state.jester.get_response(
+                        prompt,
+                        st.session_state.messages
+                    )
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+            # Reset pending flag and rerun to show new assistant message
+            st.session_state.pending_assistant_response = False
+            st.rerun()
 
     # Add a "Start Over" button
     if st.sidebar.button("Start Over"):
@@ -241,4 +242,5 @@ Let me ask you a few questions to help categorize this properly:
         st.session_state.uploaded_image = None
         st.session_state.metadata = None
         st.session_state.messages = []
+        st.session_state.pending_assistant_response = False
         st.rerun()
